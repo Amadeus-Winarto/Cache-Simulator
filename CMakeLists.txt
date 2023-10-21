@@ -1,0 +1,26 @@
+cmake_minimum_required(VERSION 3.0)
+
+project(coherence)
+
+# Fetch argparse
+include(FetchContent)
+FetchContent_Declare(
+    argparse
+    GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+)
+FetchContent_MakeAvailable(argparse)
+
+include_directories(include)
+
+add_library(trace STATIC src/trace.cpp)
+target_compile_features(trace PRIVATE cxx_std_20)
+
+add_library(mesi STATIC src/protocols/mesi.cpp)
+target_compile_features(mesi PRIVATE cxx_std_20)
+
+add_executable(main src/main.cpp src/cache.cpp)
+target_link_libraries(main PRIVATE argparse trace mesi)
+target_compile_features(main PRIVATE cxx_std_20)
+target_compile_options(main PRIVATE -Wall -Wpedantic)
+target_compile_options(main PRIVATE -fsanitize=thread)
+target_link_options(main PRIVATE -fsanitize=thread)
