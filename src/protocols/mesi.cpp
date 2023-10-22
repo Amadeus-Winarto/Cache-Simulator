@@ -32,7 +32,8 @@ auto MESIProtocol::handle_read_miss(
   // Take ownership of bus, if possible
   if (bus->owner_id && bus->owner_id != controller_id) {
     // Somebody "owns" the bus -> cannot process instruction now
-    return Instruction{InstructionType::READ, parsed_address.address};
+    return Instruction{InstructionType::READ, std::nullopt,
+                       parsed_address.address};
   }
   bus->owner_id = controller_id; // Set ourselves as the owner of the bus so
                                  // that nobody else can use it
@@ -69,7 +70,8 @@ auto MESIProtocol::handle_read_miss(
   if (is_waiting) {
     // We are waiting for another cache to respond -> cannot process instruction
     // -> return the same instruction
-    return Instruction{InstructionType::READ, parsed_address.address};
+    return Instruction{InstructionType::READ, std::nullopt,
+                       parsed_address.address};
   }
 
   // Read response
@@ -90,10 +92,10 @@ auto MESIProtocol::handle_read_miss(
 
   if (!is_shared) {
     // Memory read incurs 100 cycles cost
-    return Instruction{InstructionType::MEMORY, READ_MISS_PENALTY - 1};
+    return Instruction{InstructionType::MEMORY, READ_MISS_PENALTY - 1,
+                       parsed_address.address};
   } else {
-    // Cache-to-cache transfer incurs 0 cost
-    return Instruction{InstructionType::OTHER, 0};
+    return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
 }
 
@@ -106,7 +108,8 @@ auto MESIProtocol::handle_write_miss(
   // Take ownership of bus, if possible
   if (bus->owner_id && bus->owner_id != controller_id) {
     // Somebody "owns" the bus -> cannot process instruction now
-    return Instruction{InstructionType::READ, parsed_address.address};
+    return Instruction{InstructionType::READ, std::nullopt,
+                       parsed_address.address};
   }
   bus->owner_id = controller_id; // Set ourselves as the owner of the bus so
                                  // that nobody else can use it
@@ -133,7 +136,8 @@ auto MESIProtocol::handle_write_miss(
   line->status = Status::M;
   line->last_used = curr_cycle;
 
-  return Instruction{InstructionType::OTHER, READ_MISS_PENALTY - 1};
+  return Instruction{InstructionType::OTHER, READ_MISS_PENALTY - 1,
+                     std::nullopt};
 }
 
 auto MESIProtocol::handle_read_hit(std::shared_ptr<Bus> bus,
@@ -143,12 +147,11 @@ auto MESIProtocol::handle_read_hit(std::shared_ptr<Bus> bus,
 
   //   auto request = BusRequest{BusRequestType::BusRdX, address};
   //   bus->submit_request(request);
-  return Instruction{InstructionType::OTHER, 0};
+  return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
 auto MESIProtocol::handle_write_hit(std::shared_ptr<Bus> bus,
                                     ParsedAddress address,
                                     std::shared_ptr<CacheLine<Status>> &line,
                                     int32_t curr_cycle) -> Instruction {
-  return Instruction{InstructionType::OTHER, 0};
-}
+  return Instruction{InstructionType::OTHER, 0, std::nullopt};

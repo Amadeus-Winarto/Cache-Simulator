@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
+#include <sstream>
 #include <vector>
 
 static constexpr auto read_instruction_type(int x)
@@ -41,7 +43,17 @@ auto read_trace(const std::filesystem::path &path) -> std::vector<Instruction> {
     }
     auto instruction_type = type.value();
     Value value = std::stoul(value_str, nullptr, 16);
-    instructions.push_back(Instruction{instruction_type, value});
+
+    switch (instruction_type) {
+    case InstructionType::OTHER: {
+      instructions.push_back(
+          Instruction{instruction_type, value, std::nullopt});
+    } break;
+    default: {
+      instructions.push_back(
+          Instruction{instruction_type, std::nullopt, value});
+    } break;
+    }
   }
 
   return instructions;
@@ -101,5 +113,7 @@ auto to_string(const InstructionType &instr_type) -> std::string {
 }
 
 auto to_string(const Instruction &instr) -> std::string {
-  return to_string(instr.label) + " " + std::to_string(instr.value);
+  std::stringstream ss;
+  ss << to_string(instr.label) << " at address " << instr.address.value_or(-1);
+  return ss.str();
 }

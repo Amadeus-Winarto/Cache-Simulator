@@ -11,9 +11,14 @@ constexpr auto NUM_CORES = 2;
 enum InstructionType { READ = 0, WRITE = 1, OTHER = 2, MEMORY = 3 };
 using Value = uint32_t;
 
-struct Instruction {
+class Instruction {
+public:
   InstructionType label;
-  Value value;
+  std::optional<int> num_cycles;
+  std::optional<int> address;
+  Instruction(InstructionType label, std::optional<int> num_cycles,
+              std::optional<int> address)
+      : label(label), num_cycles(num_cycles), address(address) {}
 };
 
 auto parse_traces(std::string path_str)

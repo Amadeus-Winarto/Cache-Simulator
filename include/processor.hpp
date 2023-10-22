@@ -53,17 +53,16 @@ public:
       curr_instr = instruction_queue.at(curr_idx);
     }
 
-    auto [label, value] = curr_instr.value();
+    auto [label, cycles_left, address] = curr_instr.value();
 
     switch (label) {
     case InstructionType::MEMORY: {
-      const auto cycles_left = value;
       if (cycles_left > 1) {
-        curr_instr->value -= 1;
+        curr_instr->num_cycles = curr_instr->num_cycles.value() - 1;
       } else {
         // Memory read / write is completed -> retire instruction
         curr_instr = std::nullopt;
-        cache_controller->processor_request(label, value, curr_cycle);
+        cache_controller->processor_request(label, address.value(), curr_cycle);
 
         // Release bus ownership
         cache_controller->bus->owner_id = std::nullopt;
@@ -71,9 +70,8 @@ public:
       return curr_instr;
     }
     case InstructionType::OTHER: {
-      const auto cycles_left = value;
       if (cycles_left > 1) {
-        curr_instr->value -= 1;
+        curr_instr->num_cycles = curr_instr->num_cycles.value() - 1;
       } else {
         // Instruction is completed -> retire instruction
         curr_instr = std::nullopt;
@@ -81,10 +79,10 @@ public:
       return curr_instr;
     }
     default: {
-      auto address = value;
-      auto instr =
-          cache_controller->processor_request(label, address, curr_cycle);
-      if (instr.label == InstructionType::OTHER && instr.value == 0) {
+      auto instr = cache_controller->processor_request(label, address.value(),
+                                                       curr_cycle);
+      if (instr.label == InstructionType::OTHER &&
+          instr.num_cycles.value() == 0) {
         curr_instr = std::nullopt;
       } else {
         curr_instr = instr;

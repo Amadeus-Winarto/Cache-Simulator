@@ -54,7 +54,7 @@ public:
     switch (instr_type) {
     case InstructionType::OTHER: {
       // Invalid processor request!
-      return Instruction{InstructionType::OTHER, 0};
+      return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } break;
     case InstructionType::MEMORY: {
       auto parsed = parse_address(address);
@@ -62,7 +62,7 @@ public:
 
       // Update cache state
       line->status = Status::E;
-      return Instruction{InstructionType::OTHER, 0};
+      return Instruction{InstructionType::OTHER, 0, std::nullopt};
     }
     default: {
       auto parsed = parse_address(address);
@@ -77,7 +77,7 @@ public:
           return Protocol::handle_write_hit(bus, parsed, line, curr_cycle);
         }
         default:
-          return Instruction{InstructionType::OTHER, 0};
+          return Instruction{InstructionType::OTHER, 0, std::nullopt};
         }
       } else {
         switch (instr_type) {
@@ -90,12 +90,12 @@ public:
                                              cache_controllers, curr_cycle);
         }
         default:
-          return Instruction{InstructionType::OTHER, 0};
+          return Instruction{InstructionType::OTHER, 0, std::nullopt};
         }
       }
     }
     }
-    return Instruction{InstructionType::OTHER, 0};
+    return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
 
   auto get_interesting_cache_lines() {
