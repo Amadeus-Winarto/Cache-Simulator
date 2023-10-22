@@ -140,7 +140,6 @@ public:
         pending_bus_request = std::make_tuple(request, cycles_left);
         bus->response_wait_bits.at(controller_id) = true;
       } else {
-        std::cout << "Finish transferring data" << std::endl;
         pending_bus_request = std::nullopt;
         bus->response_wait_bits.at(controller_id) = false;
       }
