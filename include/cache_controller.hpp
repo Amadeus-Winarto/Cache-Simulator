@@ -118,7 +118,6 @@ public:
     if (request.controller_id == controller_id) {
       bus->response_valid_bits.at(controller_id) = true;
       bus->response_is_present_bits.at(controller_id) = false;
-      bus->num_responses++;
       return;
     }
 
@@ -142,12 +141,10 @@ public:
         pending_bus_request = std::make_tuple(request, cycles_left);
         bus->response_wait_bits.at(controller_id) = true;
       }
-      bus->num_responses++;
     } else {
       bus->response_is_present_bits.at(controller_id) = is_hit;
       bus->response_valid_bits.at(controller_id) = true;
       bus->response_wait_bits.at(controller_id) = false;
-      bus->num_responses++;
     }
 
     // Downgrade status if necessary

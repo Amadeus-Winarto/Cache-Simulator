@@ -26,7 +26,6 @@ public:
   std::optional<BusRequest> request_queue;
 
   // Response Line(s)
-  int num_responses{0};
   std::vector<bool> response_valid_bits;
   std::vector<bool> response_is_present_bits;
   std::vector<bool> response_wait_bits;

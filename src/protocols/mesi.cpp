@@ -82,7 +82,6 @@ auto MESIProtocol::handle_read_miss(
   std::for_each(bus->response_valid_bits.begin(),
                 bus->response_valid_bits.end(),
                 [](auto &&valid_bit) { valid_bit = false; });
-  bus->num_responses = 0;
 
   // Update cache line
   line->tag = parsed_address.tag;
