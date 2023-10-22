@@ -1,6 +1,7 @@
 #include "bus.hpp"
 #include "cache.hpp"
 #include "cache_controller.hpp"
+#include "memory_controller.hpp"
 #include "parser.hpp"
 #include "processor.hpp"
 #include "trace.hpp"
@@ -47,6 +48,9 @@ int main(int argc, char **argv) {
   // Create Bus
   auto bus = std::make_shared<Bus>(NUM_CORES);
 
+  // Create Memory Controller
+  auto memory_controller = std::make_shared<MemoryController>();
+
   // Create Cache Controllers
   auto cache_controllers =
       std::vector<std::shared_ptr<CacheController<MESIProtocol>>>{};
@@ -54,7 +58,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < NUM_CORES; i++) {
     cache_controllers.emplace_back(
         std::make_shared<CacheController<MESIProtocol>>(
-            i, cache_size, associativity, block_size, bus));
+            i, cache_size, associativity, block_size, bus, memory_controller));
   }
   std::for_each(cache_controllers.begin(), cache_controllers.end(),
                 [&cache_controllers](auto &&cc) {

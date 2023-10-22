@@ -56,19 +56,6 @@ public:
     auto [label, cycles_left, address] = curr_instr.value();
 
     switch (label) {
-    case InstructionType::MEMORY: {
-      if (cycles_left > 1) {
-        curr_instr->num_cycles = curr_instr->num_cycles.value() - 1;
-      } else {
-        // Memory read / write is completed -> retire instruction
-        curr_instr = std::nullopt;
-        cache_controller->processor_request(label, address.value(), curr_cycle);
-
-        // Release bus ownership
-        cache_controller->bus->owner_id = std::nullopt;
-      }
-      return curr_instr;
-    }
     case InstructionType::OTHER: {
       if (cycles_left > 1) {
         curr_instr->num_cycles = curr_instr->num_cycles.value() - 1;

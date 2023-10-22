@@ -8,7 +8,7 @@
 // TODO: Extend this to 4 cores
 constexpr auto NUM_CORES = 2;
 
-enum InstructionType { READ = 0, WRITE = 1, OTHER = 2, MEMORY = 3 };
+enum InstructionType { READ = 0, WRITE = 1, OTHER = 2 };
 using Value = uint32_t;
 
 class Instruction {

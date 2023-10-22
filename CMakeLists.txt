@@ -17,6 +17,7 @@ target_compile_features(trace PRIVATE cxx_std_20)
 
 add_library(mesi STATIC src/protocols/mesi.cpp)
 target_compile_features(mesi PRIVATE cxx_std_20)
+target_compile_definitions(mesi PRIVATE DEBUG_FLAG)
 
 add_executable(coherence
     src/main.cpp

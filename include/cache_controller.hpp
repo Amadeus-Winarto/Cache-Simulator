@@ -1,6 +1,7 @@
 #pragma once
 #include "bus.hpp"
 #include "cache.hpp"
+#include "memory_controller.hpp"
 #include "trace.hpp"
 
 #include <cstdint>
@@ -25,12 +26,14 @@ public:
   std::shared_ptr<Bus> bus;
 
   std::vector<std::shared_ptr<CacheController<Protocol>>> cache_controllers;
+  std::shared_ptr<MemoryController> memory_controller;
 
 public:
   CacheController(int id, int cache_size, int associativity, int block_size,
-                  std::shared_ptr<Bus> bus)
+                  std::shared_ptr<Bus> bus,
+                  std::shared_ptr<MemoryController> memory_controller)
       : controller_id(id), cache(cache_size, associativity, block_size),
-        bus(bus) {}
+        bus(bus), memory_controller(memory_controller) {}
 
   void register_cache_controllers(
       std::vector<std::shared_ptr<CacheController<Protocol>>>
@@ -56,14 +59,6 @@ public:
       // Invalid processor request!
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } break;
-    case InstructionType::MEMORY: {
-      auto parsed = parse_address(address);
-      auto [line, is_hit] = is_address_present(parsed.set_index, parsed.tag);
-
-      // Update cache state
-      line->status = Status::E;
-      return Instruction{InstructionType::OTHER, 0, std::nullopt};
-    }
     default: {
       auto parsed = parse_address(address);
       auto [line, is_hit] = is_address_present(parsed.set_index, parsed.tag);
@@ -71,10 +66,14 @@ public:
       if (is_hit) {
         switch (instr_type) {
         case InstructionType::READ: {
-          return Protocol::handle_read_hit(bus, parsed, line, curr_cycle);
+          return Protocol::handle_read_hit(controller_id, curr_cycle, parsed,
+                                           cache_controllers, bus, line,
+                                           memory_controller);
         }
         case InstructionType::WRITE: {
-          return Protocol::handle_write_hit(bus, parsed, line, curr_cycle);
+          return Protocol::handle_write_hit(controller_id, curr_cycle, parsed,
+                                            cache_controllers, bus, line,
+                                            memory_controller);
         }
         default:
           return Instruction{InstructionType::OTHER, 0, std::nullopt};
@@ -82,12 +81,14 @@ public:
       } else {
         switch (instr_type) {
         case InstructionType::READ: {
-          return Protocol::handle_read_miss(controller_id, bus, parsed, line,
-                                            cache_controllers, curr_cycle);
+          return Protocol::handle_read_miss(controller_id, curr_cycle, parsed,
+                                            cache_controllers, bus, line,
+                                            memory_controller);
         }
         case InstructionType::WRITE: {
-          return Protocol::handle_write_miss(controller_id, bus, parsed, line,
-                                             cache_controllers, curr_cycle);
+          return Protocol::handle_write_miss(controller_id, curr_cycle, parsed,
+                                             cache_controllers, bus, line,
+                                             memory_controller);
         }
         default:
           return Instruction{InstructionType::OTHER, 0, std::nullopt};

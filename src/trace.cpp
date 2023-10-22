@@ -106,8 +106,6 @@ auto to_string(const InstructionType &instr_type) -> std::string {
     return "WRITE";
   case InstructionType::OTHER:
     return "OTHER";
-  case InstructionType::MEMORY:
-    return "MEMORY";
   }
   return "INVALID";
 }
