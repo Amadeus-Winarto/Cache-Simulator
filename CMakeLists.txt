@@ -23,6 +23,7 @@ add_executable(coherence
     src/main.cpp
     src/parser.cpp
     src/cache.cpp
+    src/bus.cpp
     src/memory_controller.cpp
 )
 target_link_libraries(coherence PRIVATE argparse trace mesi)

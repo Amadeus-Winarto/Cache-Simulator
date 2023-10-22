@@ -10,26 +10,6 @@
 #include <numeric>
 #include <optional>
 
-auto acquire_bus(int controller_id, std::shared_ptr<Bus> bus) -> bool {
-  // Take ownership of bus, if possible
-  if (bus->owner_id && bus->owner_id != controller_id) {
-    // Somebody "owns" the bus -> cannot process instruction now
-
-#ifdef DEBUG_FLAG
-    std::cout << "\t Cache " << controller_id
-              << " fails to acquire bus due to owner " << bus->owner_id.value()
-              << std::endl;
-#endif
-    return false;
-  }
-
-  // Set ourselves as the owner of the bus so that nobody else can use it
-  bus->owner_id = controller_id;
-  return true;
-}
-
-void release_bus(std::shared_ptr<Bus> bus) { bus->owner_id = std::nullopt; }
-
 auto to_string(const MESIStatus &status) -> std::string {
   switch (status) {
   case MESIStatus::M:
@@ -54,7 +34,7 @@ auto MESIProtocol::handle_read_miss(
     std::shared_ptr<MemoryController> memory_controller) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::READ, std::nullopt, parsed_address.address};
-  if (!acquire_bus(controller_id, bus)) {
+  if (!bus->acquire(controller_id)) {
     return instruction;
   }
 
@@ -140,7 +120,7 @@ auto MESIProtocol::handle_read_miss(
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
-      release_bus(bus);
+      bus->release(controller_id);
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } else {
 #ifdef DEBUG_FLAG
@@ -158,7 +138,7 @@ auto MESIProtocol::handle_read_miss(
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
 
-    release_bus(bus);
+    bus->release(controller_id);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
 }
@@ -171,7 +151,7 @@ auto MESIProtocol::handle_write_miss(
     std::shared_ptr<MemoryController> memory_controller) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::WRITE, std::nullopt, parsed_address.address};
-  if (!acquire_bus(controller_id, bus)) {
+  if (!bus->acquire(controller_id)) {
     return instruction;
   }
 
@@ -257,7 +237,7 @@ auto MESIProtocol::handle_write_miss(
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
-      release_bus(bus);
+      bus->release(controller_id);
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } else {
 #ifdef DEBUG_FLAG
@@ -273,7 +253,7 @@ auto MESIProtocol::handle_write_miss(
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
-    release_bus(bus);
+    bus->release(controller_id);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
 }
@@ -285,12 +265,12 @@ auto MESIProtocol::handle_read_hit(
     std::shared_ptr<MemoryController>) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::READ, std::nullopt, parsed_address.address};
-  if (!acquire_bus(controller_id, bus)) {
+  if (!bus->acquire(controller_id)) {
     return instruction;
   }
 
   // No bus transaction generated -> return immediately
-  release_bus(bus);
+  bus->release(controller_id);
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
@@ -302,17 +282,17 @@ auto MESIProtocol::handle_write_hit(
     std::shared_ptr<MemoryController> memory_controller) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::WRITE, std::nullopt, parsed_address.address};
-  if (!acquire_bus(controller_id, bus)) {
+  if (!bus->acquire(controller_id)) {
     return instruction;
   }
 
   switch (line->status) {
   case MESIStatus::M: {
-    release_bus(bus);
+    bus->release(controller_id);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
   case MESIStatus::E: {
-    release_bus(bus);
+    bus->release(controller_id);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
   case MESIStatus::S: {
@@ -375,7 +355,7 @@ auto MESIProtocol::handle_write_hit(
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
-    release_bus(bus);
+    bus->release(controller_id);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
   case MESIStatus::I: {

@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <iostream>
+#include <list>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -19,9 +21,11 @@ auto to_string(const BusRequest &request) -> std::string;
  *
  */
 class Bus {
-public:
+private:
   std::optional<int> owner_id;
+  std::list<int> registration_queue;
 
+public:
   // Request Line
   std::optional<BusRequest> request_queue;
 
@@ -33,8 +37,9 @@ public:
   // Data line is not simulated since there's no actual data here in the
   // simulator
 
-  Bus(int num_processors)
-      : response_valid_bits(num_processors, false),
-        response_is_present_bits(num_processors, false),
-        response_wait_bits(num_processors, false) {}
+  Bus(int num_processors);
+
+  auto acquire(int controller_id) -> int;
+  void release(int controller_id);
+  auto get_owner_id() -> std::optional<int>;
 };
