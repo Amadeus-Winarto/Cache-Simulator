@@ -59,6 +59,27 @@ auto MESIProtocol::handle_read_miss(
   std::cout << ss.str();
 #endif
 
+  if (line->status == MESIStatus::M) {
+    // Write-back to Memory
+    const auto request = BusRequest{BusRequestType::Flush,
+                                    parsed_address.address, controller_id};
+    bus->request_queue = request;
+    if (memory_controller->receive_bus_request(request)) {
+      // Write-back completed! Invalidate the line so that the next time it is
+      // called, it goes back to read-miss
+#ifdef DEBUG_FLAG
+      std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
+#endif
+      line->status = MESIStatus::I;
+    } else {
+#ifdef DEBUG_FLAG
+      std::cout << "\t<<<Writing LRU to memory" << std::endl;
+#endif
+      // Write-back is not done
+      return instruction;
+    }
+  }
+
   // Send BusRd request
   const auto request =
       BusRequest{BusRequestType::BusRd, parsed_address.address, controller_id};
@@ -83,7 +104,7 @@ auto MESIProtocol::handle_read_miss(
 
   if (is_waiting) {
 #ifdef DEBUG_FLAG
-    std::cout << "\t<<< Waiting for Cache." << std::endl;
+    std::cout << "\t<<< Waiting for Cache..." << std::endl;
 #endif
     // We are waiting for another cache to respond -> cannot process instruction
     // -> return the same instruction
@@ -101,15 +122,15 @@ auto MESIProtocol::handle_read_miss(
                 bus->response_valid_bits.end(),
                 [](auto &&valid_bit) { valid_bit = false; });
 
-  // Update cache line
-  line->tag = parsed_address.tag;
-  line->last_used = curr_cycle;
-
   if (!is_shared) {
     // Miss: Go to memory controller
     if (memory_controller->receive_bus_request(request)) {
       // Memory-to-cache transfer completed
       bus->owner_id = std::nullopt;
+
+      // Update cache line
+      line->tag = parsed_address.tag;
+      line->last_used = curr_cycle;
       line->status = Status::E;
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
@@ -117,13 +138,17 @@ auto MESIProtocol::handle_read_miss(
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } else {
 #ifdef DEBUG_FLAG
-      std::cout << "\t<<< Waiting for Memory." << std::endl;
+      std::cout << "\t<<< Waiting for Memory..." << std::endl;
 #endif
 
       return instruction;
     }
   } else {
     // Cache-to-cache transfer completed
+
+    // Update cache line
+    line->tag = parsed_address.tag;
+    line->last_used = curr_cycle;
     line->status = Status::S;
     bus->owner_id = std::nullopt;
 #ifdef DEBUG_FLAG
@@ -155,6 +180,27 @@ auto MESIProtocol::handle_write_miss(
   std::cout << ss.str();
 #endif
 
+  if (line->status == MESIStatus::M) {
+    // Write-back to Memory
+    const auto request = BusRequest{BusRequestType::Flush,
+                                    parsed_address.address, controller_id};
+    bus->request_queue = request;
+    if (memory_controller->receive_bus_request(request)) {
+      // Write-back completed! Invalidate the line so that the next time it is
+      // called, it goes back to read-miss
+#ifdef DEBUG_FLAG
+      std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
+#endif
+      line->status = MESIStatus::I;
+    } else {
+#ifdef DEBUG_FLAG
+      std::cout << "\t<<<Writing LRU to memory" << std::endl;
+#endif
+      // Write-back is not done
+      return instruction;
+    }
+  }
+
   // Send BusRdX request
   auto request =
       BusRequest{BusRequestType::BusRdX, parsed_address.address, controller_id};
@@ -179,7 +225,7 @@ auto MESIProtocol::handle_write_miss(
 
   if (is_waiting) {
 #ifdef DEBUG_FLAG
-    std::cout << "\t<<< Waiting for Cache." << std::endl;
+    std::cout << "\t<<< Waiting for Cache..." << std::endl;
 #endif
     // We are waiting for another cache to respond -> cannot process instruction
     // -> return the same instruction
@@ -197,14 +243,14 @@ auto MESIProtocol::handle_write_miss(
                 bus->response_valid_bits.end(),
                 [](auto &&valid_bit) { valid_bit = false; });
 
-  // Update cache line
-  line->tag = parsed_address.tag;
-  line->last_used = curr_cycle;
-
   if (!is_shared) {
     // Miss: Go to memory controller
     if (memory_controller->receive_bus_request(request)) {
       // Memory-to-cache transfer completed
+
+      // Update cache line
+      line->tag = parsed_address.tag;
+      line->last_used = curr_cycle;
       line->status = MESIStatus::M;
       bus->owner_id = std::nullopt;
 #ifdef DEBUG_FLAG
@@ -213,12 +259,16 @@ auto MESIProtocol::handle_write_miss(
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } else {
 #ifdef DEBUG_FLAG
-      std::cout << "\t<<< Waiting for Memory." << std::endl;
+      std::cout << "\t<<< Waiting for Memory..." << std::endl;
 #endif
       return instruction;
     }
   } else {
     // Cache-to-cache transfer completed
+
+    // Update cache line
+    line->tag = parsed_address.tag;
+    line->last_used = curr_cycle;
     line->status = Status::M;
     bus->owner_id = std::nullopt;
 #ifdef DEBUG_FLAG
@@ -296,7 +346,7 @@ auto MESIProtocol::handle_write_hit(
 
     if (is_waiting) {
 #ifdef DEBUG_FLAG
-      std::cout << "\t<<< Waiting for Cache." << std::endl;
+      std::cout << "\t<<< Waiting for Cache..." << std::endl;
 #endif
       // We are waiting for another cache to respond -> cannot process
       // instruction -> return the same instruction
@@ -362,5 +412,9 @@ auto MESIProtocol::state_transition(const BusRequest &request,
     }
     }
   } break;
+  case BusRequestType::Flush: {
+    std::cout << "FLUSH should not appear here!" << std::endl;
+    std::exit(0);
+  }
   };
 }

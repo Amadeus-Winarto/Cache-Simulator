@@ -4,7 +4,7 @@
 #include <optional>
 #include <vector>
 
-enum class BusRequestType { BusRd, BusRdX };
+enum class BusRequestType { BusRd, BusRdX, Flush };
 
 struct BusRequest {
   BusRequestType type;
