@@ -14,6 +14,12 @@ auto acquire_bus(int controller_id, std::shared_ptr<Bus> bus) -> bool {
   // Take ownership of bus, if possible
   if (bus->owner_id && bus->owner_id != controller_id) {
     // Somebody "owns" the bus -> cannot process instruction now
+
+#ifdef DEBUG_FLAG
+    std::cout << "\t Cache " << controller_id
+              << " fails to acquire bus due to owner " << bus->owner_id.value()
+              << std::endl;
+#endif
     return false;
   }
 
@@ -21,6 +27,8 @@ auto acquire_bus(int controller_id, std::shared_ptr<Bus> bus) -> bool {
   bus->owner_id = controller_id;
   return true;
 }
+
+void release_bus(std::shared_ptr<Bus> bus) { bus->owner_id = std::nullopt; }
 
 auto to_string(const MESIStatus &status) -> std::string {
   switch (status) {
@@ -125,16 +133,14 @@ auto MESIProtocol::handle_read_miss(
   if (!is_shared) {
     // Miss: Go to memory controller
     if (memory_controller->receive_bus_request(request)) {
-      // Memory-to-cache transfer completed
-      bus->owner_id = std::nullopt;
-
-      // Update cache line
+      // Memory-to-cache transfer completed ->  Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
       line->status = Status::E;
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
+      release_bus(bus);
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } else {
 #ifdef DEBUG_FLAG
@@ -144,17 +150,15 @@ auto MESIProtocol::handle_read_miss(
       return instruction;
     }
   } else {
-    // Cache-to-cache transfer completed
-
-    // Update cache line
+    // Cache-to-cache transfer completed -> Update cache line
     line->tag = parsed_address.tag;
     line->last_used = curr_cycle;
     line->status = Status::S;
-    bus->owner_id = std::nullopt;
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
 
+    release_bus(bus);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
 }
@@ -246,16 +250,14 @@ auto MESIProtocol::handle_write_miss(
   if (!is_shared) {
     // Miss: Go to memory controller
     if (memory_controller->receive_bus_request(request)) {
-      // Memory-to-cache transfer completed
-
-      // Update cache line
+      // Memory-to-cache transfer completed -> Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
       line->status = MESIStatus::M;
-      bus->owner_id = std::nullopt;
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
+      release_bus(bus);
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } else {
 #ifdef DEBUG_FLAG
@@ -264,16 +266,14 @@ auto MESIProtocol::handle_write_miss(
       return instruction;
     }
   } else {
-    // Cache-to-cache transfer completed
-
-    // Update cache line
+    // Cache-to-cache transfer completed -> Update cache line
     line->tag = parsed_address.tag;
     line->last_used = curr_cycle;
     line->status = Status::M;
-    bus->owner_id = std::nullopt;
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
+    release_bus(bus);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
 }
@@ -290,6 +290,7 @@ auto MESIProtocol::handle_read_hit(
   }
 
   // No bus transaction generated -> return immediately
+  release_bus(bus);
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
@@ -307,9 +308,11 @@ auto MESIProtocol::handle_write_hit(
 
   switch (line->status) {
   case MESIStatus::M: {
+    release_bus(bus);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
   case MESIStatus::E: {
+    release_bus(bus);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
   case MESIStatus::S: {
@@ -368,11 +371,11 @@ auto MESIProtocol::handle_write_hit(
     line->tag = parsed_address.tag;
     line->last_used = curr_cycle;
     line->status = MESIStatus::M;
-    bus->owner_id = std::nullopt;
 
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
+    release_bus(bus);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
   case MESIStatus::I: {
