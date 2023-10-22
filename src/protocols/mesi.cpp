@@ -1,8 +1,7 @@
 #include "protocols/mesi.hpp"
+
 #include "trace.hpp"
 #include <algorithm>
-#include <atomic>
-#include <mutex>
 #include <numeric>
 #include <optional>
 
@@ -26,12 +25,11 @@ auto to_string(const MESIStatus &status) -> std::string {
 // TODO: Complete MESI Protocol
 auto MESIProtocol::handle_read_miss(
     int controller_id, std::shared_ptr<Bus> bus, ParsedAddress parsed_address,
-    std::shared_ptr<ProtectedCacheLine<Status>> &line, int32_t curr_cycle)
-    -> Instruction {
-  std::lock_guard<std::mutex> line_lock{line->mutex};
-
+    std::shared_ptr<ProtectedCacheLine<Status>> &line,
+    std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
+        &cache_controllers,
+    int32_t curr_cycle) -> Instruction {
   // Take ownership of bus, if possible
-  std::lock_guard<std::mutex> bus_lock{bus->request_mutex};
   if (bus->owner_id && bus->owner_id != controller_id) {
     // Somebody "owns" the bus -> cannot process instruction now
     return Instruction{InstructionType::READ, parsed_address.address};
@@ -50,15 +48,15 @@ auto MESIProtocol::handle_read_miss(
   auto request =
       BusRequest{BusRequestType::BusRd, parsed_address.address, controller_id};
   bus->request_queue.at(0) = request;
-  bus->request_ready.store(true);
+  bus->request_ready = true;
 
   // Wait for response
-  while (bus->num_responses.load(std::memory_order_acquire) < NUM_CORES) {
-    std::this_thread::yield();
+  for (auto cache_controller : cache_controllers) {
+    cache_controller->receive_bus_request();
   }
 
   // Invalidate request
-  bus->request_ready.store(false, std::memory_order_release);
+  bus->request_ready = false;
 
   // Check if any of the response is a PENDING response
   bool is_waiting = false;
@@ -106,12 +104,11 @@ auto MESIProtocol::handle_read_miss(
 
 auto MESIProtocol::handle_write_miss(
     int controller_id, std::shared_ptr<Bus> bus, ParsedAddress parsed_address,
-    std::shared_ptr<ProtectedCacheLine<Status>> &line, int32_t curr_cycle)
-    -> Instruction {
-  std::lock_guard<std::mutex> lock{line->mutex};
-
+    std::shared_ptr<ProtectedCacheLine<Status>> &line,
+    std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
+        &cache_controllers,
+    int32_t curr_cycle) -> Instruction {
   // Take ownership of bus, if possible
-  std::lock_guard<std::mutex> bus_lock{bus->request_mutex};
   if (bus->owner_id && bus->owner_id != controller_id) {
     // Somebody "owns" the bus -> cannot process instruction now
     return Instruction{InstructionType::READ, parsed_address.address};
@@ -130,15 +127,16 @@ auto MESIProtocol::handle_write_miss(
   auto request =
       BusRequest{BusRequestType::BusRdX, parsed_address.address, controller_id};
   bus->request_queue.at(0) = request;
-  bus->request_ready.store(true);
+  bus->request_ready = true;
 
   // Wait for response
-  while (bus->num_responses.load(std::memory_order_acquire) < NUM_CORES) {
-    std::this_thread::yield();
+  // Wait for response
+  for (auto cache_controller : cache_controllers) {
+    cache_controller->receive_bus_request();
   }
 
   // Invalidate request
-  bus->request_ready.store(false, std::memory_order_release);
+  bus->request_ready = false;
 
   // TODO: dummy bus request and response
   line->line.tag = parsed_address.tag;

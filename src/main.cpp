@@ -49,12 +49,25 @@ int main(int argc, char **argv) {
   // Create Bus
   auto bus = std::make_shared<Bus>(NUM_CORES);
 
+  // Create Cache Controllers
+  auto cache_controllers =
+      std::vector<std::shared_ptr<CacheController<MESIProtocol>>>{};
+  cache_controllers.reserve(NUM_CORES);
+  for (int i = 0; i < NUM_CORES; i++) {
+    cache_controllers.emplace_back(
+        std::make_shared<CacheController<MESIProtocol>>(
+            i, cache_size, associativity, block_size, bus));
+  }
+  for (const auto &cache_controller : cache_controllers) {
+    cache_controller->register_cache_controllers(cache_controllers);
+  }
+
   // Create processors
   auto cores = std::vector<std::shared_ptr<MESIProcessor>>{};
   cores.reserve(NUM_CORES);
   for (int i = 0; i < NUM_CORES; i++) {
     cores.emplace_back(std::make_shared<MESIProcessor>(
-        i, traces.at(i), cache_size, associativity, block_size, bus));
+        i, traces.at(i), cache_controllers.at(i)));
   }
 
   // Run simulation
@@ -77,9 +90,6 @@ int main(int argc, char **argv) {
       << "-------------------------SIMULATION END-------------------------"
       << std::endl;
   std::cout << "Simulation complete at cycle: " << cycle << std::endl;
-  for (const auto &core : cores) {
-    core->stop_cache_controller();
-  }
 
   for (const auto &core : cores) {
     core->get_interesting_cache_lines();

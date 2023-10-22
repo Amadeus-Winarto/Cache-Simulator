@@ -1,8 +1,6 @@
 #pragma once
-#include <atomic>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -22,15 +20,14 @@ auto to_string(const BusRequest &request) -> std::string;
  */
 class Bus {
 public:
-  std::mutex request_mutex;
   std::optional<int> owner_id;
 
   // Request Line
-  std::atomic<bool> request_ready{false};
+  bool request_ready{false};
   std::vector<BusRequest> request_queue;
 
   // Response Line(s)
-  std::atomic<int> num_responses{0};
+  int num_responses{0};
   // They're not bool because vector<bool> is not thread-safe
   std::vector<int> response_valid_bits;
   std::vector<int> response_is_present_bits;

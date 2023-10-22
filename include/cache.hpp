@@ -2,12 +2,10 @@
 #include "bus.hpp"
 #include "trace.hpp"
 
-#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <sys/types.h>
 #include <thread>
@@ -44,7 +42,6 @@ auto to_string(const CacheLine<Status> &cache_line) -> std::string {
 
 template <typename Status> struct ProtectedCacheLine {
   CacheLine<Status> line;
-  std::mutex mutex;
 
   ProtectedCacheLine(uint32_t set_index) : line(set_index) {}
 };
@@ -53,7 +50,6 @@ template <typename Status> class CacheSet {
 public:
   std::vector<std::shared_ptr<ProtectedCacheLine<Status>>> lines;
   const uint32_t set_index;
-  std::mutex mutex;
 
   CacheSet(uint32_t set_index, int associativity)
       : lines(associativity), set_index(set_index) {
@@ -106,9 +102,7 @@ private:
     auto &set = sets.at(set_index);
 
     auto line = [&]() -> std::shared_ptr<ProtectedCacheLine<Status>> {
-      std::lock_guard<std::mutex> set_lock(set->mutex);
       for (auto &line : set->lines) {
-        std::lock_guard<std::mutex> line_lock(line->mutex);
         if (line->tag == tag) {
           // Tag is in cache
           return line;
@@ -118,7 +112,6 @@ private:
     }();
 
     if (line) {
-      std::lock_guard<std::mutex> line_lock(line->mutex);
       if (line->tag == tag && line->status != Status::I) {
         // Hit
         return true;
