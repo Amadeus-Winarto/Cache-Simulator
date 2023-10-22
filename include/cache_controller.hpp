@@ -3,7 +3,6 @@
 #include "cache.hpp"
 #include "trace.hpp"
 
-#include <atomic>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -109,17 +108,12 @@ public:
   }
 
   void receive_bus_request() {
-    if (!bus->request_ready) {
-      return;
-    }
-    // Request is ready
-
     if (bus->response_valid_bits.at(controller_id)) {
       // Response is given already -> ignore
       return;
     }
 
-    const auto &request = bus->request_queue.front();
+    const auto &request = bus->request_queue.value();
     // Always ignore requests from the same cache
     if (request.controller_id == controller_id) {
       bus->response_valid_bits.at(controller_id) = true;

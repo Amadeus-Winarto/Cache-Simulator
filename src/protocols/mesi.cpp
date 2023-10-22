@@ -47,16 +47,12 @@ auto MESIProtocol::handle_read_miss(
   // Send BusRd request
   auto request =
       BusRequest{BusRequestType::BusRd, parsed_address.address, controller_id};
-  bus->request_queue.at(0) = request;
-  bus->request_ready = true;
+  bus->request_queue = request;
 
-  // Wait for response
+  // Get responses from other caches
   for (auto cache_controller : cache_controllers) {
     cache_controller->receive_bus_request();
   }
-
-  // Invalidate request
-  bus->request_ready = false;
 
   // Check if any of the response is a PENDING response
   bool is_waiting = false;
@@ -85,7 +81,7 @@ auto MESIProtocol::handle_read_miss(
   // Invalidate all responses
   std::for_each(bus->response_valid_bits.begin(),
                 bus->response_valid_bits.end(),
-                [](int &valid_bit) { valid_bit = false; });
+                [](auto &&valid_bit) { valid_bit = false; });
   bus->num_responses = 0;
 
   // Update cache line
@@ -126,17 +122,12 @@ auto MESIProtocol::handle_write_miss(
   // Send BusRdX request
   auto request =
       BusRequest{BusRequestType::BusRdX, parsed_address.address, controller_id};
-  bus->request_queue.at(0) = request;
-  bus->request_ready = true;
+  bus->request_queue = request;
 
-  // Wait for response
   // Wait for response
   for (auto cache_controller : cache_controllers) {
     cache_controller->receive_bus_request();
   }
-
-  // Invalidate request
-  bus->request_ready = false;
 
   // TODO: dummy bus request and response
   line->line.tag = parsed_address.tag;
