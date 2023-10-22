@@ -38,6 +38,8 @@ public:
     this->cache_controllers = cache_controllers;
   }
 
+  void deregister_cache_controllers() { this->cache_controllers.clear(); }
+
   /**
    * @brief Process a processor request. Returns the resulting instruction
    *

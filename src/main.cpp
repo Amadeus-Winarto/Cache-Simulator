@@ -58,9 +58,10 @@ int main(int argc, char **argv) {
         std::make_shared<CacheController<MESIProtocol>>(
             i, cache_size, associativity, block_size, bus));
   }
-  for (const auto &cache_controller : cache_controllers) {
-    cache_controller->register_cache_controllers(cache_controllers);
-  }
+  std::for_each(cache_controllers.begin(), cache_controllers.end(),
+                [&cache_controllers](auto &&cc) {
+                  cc->register_cache_controllers(cache_controllers);
+                });
 
   // Create processors
   auto cores = std::vector<std::shared_ptr<MESIProcessor>>{};
@@ -94,6 +95,9 @@ int main(int argc, char **argv) {
   for (const auto &core : cores) {
     core->get_interesting_cache_lines();
   }
+
+  std::for_each(cache_controllers.begin(), cache_controllers.end(),
+                [](auto &&cc) { cc->deregister_cache_controllers(); });
 
   return 0;
 }
