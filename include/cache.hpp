@@ -66,18 +66,19 @@ template <typename Protocol> class Cache {
   using Status = typename Protocol::Status;
 
 public:
-  const int num_offset_bits = std::log2(WORD_SIZE);
+  const int num_offset_bits;
   const int num_sets;
   const int num_set_index_bits;
-  const int num_words_per_set;
+  const int num_words_per_line;
 
   std::vector<std::shared_ptr<CacheSet<Status>>> sets;
 
   Cache(int cache_size, int associativity, int block_size)
-      : num_sets((cache_size / associativity) /
+      : num_offset_bits(std::log2(WORD_SIZE)),
+        num_sets((cache_size / associativity) /
                  block_size), // 64 Sets -> set_index goes from 0 to 63
         num_set_index_bits(std::log2(num_sets)), // 6 bits to address 64 sets
-        num_words_per_set(std::pow(2, num_offset_bits) / (WORD_SIZE << 3)),
+        num_words_per_line(std::pow(2, num_offset_bits) / (WORD_SIZE >> 3)),
         sets(num_sets) {
 
     for (int i = 0; i < num_sets; i++) {
