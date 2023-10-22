@@ -66,12 +66,12 @@ int main(int argc, char **argv) {
                 });
 
   // Create processors
-  auto cores = std::vector<std::shared_ptr<MESIProcessor>>{};
-  cores.reserve(NUM_CORES);
+  auto ready_cores = std::list<std::shared_ptr<MESIProcessor>>{};
   for (int i = 0; i < NUM_CORES; i++) {
-    cores.emplace_back(std::make_shared<MESIProcessor>(
+    ready_cores.emplace_back(std::make_shared<MESIProcessor>(
         i, traces.at(i), cache_controllers.at(i)));
   }
+  auto expired_cores = std::list<std::shared_ptr<MESIProcessor>>{};
 
   // Run simulation
   int cycle = 0;
@@ -80,12 +80,29 @@ int main(int argc, char **argv) {
   std::cout
       << "-------------------------SIMULATION BEGIN-------------------------"
       << std::endl;
-  while (std::any_of(cores.begin(), cores.end(),
+
+  while (std::any_of(ready_cores.begin(), ready_cores.end(),
                      [](auto &core) { return !core->is_done(); })) {
-    for (auto &core : cores) {
-      core->run_once(cycle);
+
+    const int num_ready = ready_cores.size();
+    int i = 0;
+    while (i < num_ready) {
+      auto core = ready_cores.front();
+      ready_cores.pop_front();
+      auto instr = core->run_once(cycle);
+      if (instr) {
+        ready_cores.push_back(core);
+      } else {
+        expired_cores.push_back(core);
+      }
+      i++;
     }
 
+    if (ready_cores.size() == 0) {
+      // All cores have run. Re-schedule cores
+      ready_cores = expired_cores;
+      expired_cores.clear();
+    }
     cycle++;
   }
   std::cout << std::endl;
@@ -94,7 +111,7 @@ int main(int argc, char **argv) {
       << std::endl;
   std::cout << "Simulation complete at cycle: " << cycle << std::endl;
 
-  for (const auto &core : cores) {
+  for (const auto &core : ready_cores) {
     core->get_interesting_cache_lines();
   }
 
