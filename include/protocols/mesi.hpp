@@ -50,8 +50,11 @@ public:
                               std::shared_ptr<CacheLine<Status>> &line,
                               int32_t curr_cycle) -> Instruction;
 
-  static auto
-  handle_write_hit(std::shared_ptr<Bus> bus, ParsedAddress address,
-                   std::shared_ptr<CacheLine<Status>> &line,
-                   int32_t curr_cycle) -> Instruction;
+  static auto handle_write_hit(std::shared_ptr<Bus> bus, ParsedAddress address,
+                               std::shared_ptr<CacheLine<Status>> &line,
+                               int32_t curr_cycle) -> Instruction;
+
+  static auto state_transition(const BusRequest &request,
+                               std::shared_ptr<CacheLine<MESIStatus>> line)
+      -> void;
 };

@@ -1,7 +1,11 @@
 #include "protocols/mesi.hpp"
 
+#include "bus.hpp"
+#include "cache.hpp"
 #include "trace.hpp"
+
 #include <algorithm>
+#include <memory>
 #include <numeric>
 #include <optional>
 
@@ -95,6 +99,9 @@ auto MESIProtocol::handle_read_miss(
     return Instruction{InstructionType::MEMORY, READ_MISS_PENALTY - 1,
                        parsed_address.address};
   } else {
+    // Cache-to-cache transfer completed
+    line->status = Status::S;
+    bus->owner_id = std::nullopt;
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
 }
@@ -117,8 +124,8 @@ auto MESIProtocol::handle_write_miss(
   std::stringstream ss;
   ss << "Cycle: " << curr_cycle << "\n"
      << "Processor " << controller_id << " requests WRITE at address "
-     << parsed_address.address << "\n\tLine: " << to_string(line)
-     << "\n\t>>> " << to_string(line) << std::endl;
+     << parsed_address.address << "\n\tLine: " << to_string(line) << "\n\t>>> "
+     << to_string(line) << std::endl;
   std::cout << ss.str();
 
   // Send BusRdX request
@@ -155,3 +162,37 @@ auto MESIProtocol::handle_write_hit(std::shared_ptr<Bus> bus,
                                     std::shared_ptr<CacheLine<Status>> &line,
                                     int32_t curr_cycle) -> Instruction {
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
+}
+auto MESIProtocol::state_transition(const BusRequest &request,
+                                    std::shared_ptr<CacheLine<MESIStatus>> line)
+    -> void {
+  switch (request.type) {
+  case BusRequestType::BusRd: {
+    // Read request
+    switch (line->status) {
+    case Status::E: {
+      line->status = Status::S;
+    } break;
+    case Status::M: {
+      line->status = Status::S;
+    } break;
+    default: {
+      break;
+    }
+    }
+    break;
+  }
+  case BusRequestType::BusRdX: {
+    // Invalidation request
+    switch (line->status) {
+    case Status::M: {
+      line->status = Status::I;
+    } break;
+    default: {
+      line->status = Status::I;
+      break;
+    }
+    }
+  } break;
+  };
+}

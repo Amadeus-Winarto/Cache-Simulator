@@ -136,54 +136,26 @@ public:
       auto [request, cycles_left] = pending_bus_request.value();
       bus->response_valid_bits.at(controller_id) = true;
       bus->response_is_present_bits.at(controller_id) = true;
-      if (--cycles_left == 0) {
-        pending_bus_request = std::nullopt;
-        bus->response_wait_bits.at(controller_id) = false;
-      } else {
+      if (--cycles_left > 0) {
         pending_bus_request = std::make_tuple(request, cycles_left);
         bus->response_wait_bits.at(controller_id) = true;
+      } else {
+        std::cout << "Finish transferring data" << std::endl;
+        pending_bus_request = std::nullopt;
+        bus->response_wait_bits.at(controller_id) = false;
       }
     } else {
       bus->response_is_present_bits.at(controller_id) = is_hit;
+      bus->response_wait_bits.at(controller_id) = is_hit;
       bus->response_valid_bits.at(controller_id) = true;
-      bus->response_wait_bits.at(controller_id) = false;
-    }
 
+      if (is_hit) {
+        pending_bus_request =
+            std::make_tuple(request, 2 * cache.num_words_per_line - 1);
+      }
+    }
     // Downgrade status if necessary
-    switch (request.type) {
-    case BusRequestType::BusRd: {
-      // Read request
-      switch (line->status) {
-      case Status::E: {
-        line->status = Status::S;
-      } break;
-      case Status::M: {
-        pending_bus_request = std::make_tuple(
-            request, CACHE_FLUSH_MULTIPLIER * cache.num_words_per_set - 1);
-        line->status = Status::S;
-      } break;
-      default: {
-        break;
-      }
-      }
-      break;
-    }
-    case BusRequestType::BusRdX: {
-      // Invalidation request
-      switch (line->status) {
-      case Status::M: {
-        pending_bus_request = std::make_tuple(
-            request, CACHE_FLUSH_MULTIPLIER * cache.num_words_per_set - 1);
-        line->status = Status::I;
-      } break;
-      default: {
-        line->status = Status::I;
-        break;
-      }
-      }
-    } break;
-    }
-
+    Protocol::state_transition(request, line);
     return;
   }
 
