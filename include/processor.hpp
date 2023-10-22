@@ -24,13 +24,6 @@ public:
       : processor_id(processor_id), instruction_queue(instruction_queue),
         cache_controller(cache_controller){};
 
-  Processor(int processor_id, const std::vector<Instruction> &instruction_queue,
-            int cache_size, int associativity, int block_size,
-            std::shared_ptr<Bus> bus)
-      : processor_id(processor_id), instruction_queue(instruction_queue),
-        cache_controller(processor_id, cache_size, associativity, block_size,
-                         bus){};
-
   auto get_processor_id() -> int { return processor_id; }
 
   auto is_done() -> bool {
