@@ -18,9 +18,10 @@ target_compile_features(trace PRIVATE cxx_std_20)
 add_library(mesi STATIC src/protocols/mesi.cpp)
 target_compile_features(mesi PRIVATE cxx_std_20)
 
-add_executable(coherence src/main.cpp src/cache.cpp)
+add_executable(coherence src/main.cpp src/parser.cpp src/cache.cpp)
 target_link_libraries(coherence PRIVATE argparse trace mesi)
 target_compile_features(coherence PRIVATE cxx_std_20)
+
 target_compile_options(coherence PRIVATE -Wall -Wpedantic)
 target_compile_options(coherence PRIVATE -fsanitize=address)
 target_link_options(coherence PRIVATE -fsanitize=address)
