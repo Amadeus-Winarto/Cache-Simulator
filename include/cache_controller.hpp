@@ -59,7 +59,7 @@ public:
       auto [line, is_hit] = is_address_present(parsed.set_index, parsed.tag);
 
       // Update cache state
-      line->line.status = Status::E;
+      line->status = Status::E;
       return Instruction{InstructionType::OTHER, 0};
     }
     default: {
@@ -99,9 +99,9 @@ public:
   auto get_interesting_cache_lines() {
     std::cout << "Cache " << controller_id << ": " << std::endl;
     for (std::shared_ptr<CacheSet<Status>> cache_set_ptr : cache.sets) {
-      for (auto cache_line_ptr : cache_set_ptr->lines) {
-        if (cache_line_ptr->line.status != Status::I) {
-          std::cout << "\t" << to_string(cache_line_ptr->line) << std::endl;
+      for (auto line : cache_set_ptr->lines) {
+        if (line->status != Status::I) {
+          std::cout << "\t" << to_string(line) << std::endl;
         }
       }
     }
@@ -154,14 +154,14 @@ public:
     switch (request.type) {
     case BusRequestType::BusRd: {
       // Read request
-      switch (line->line.status) {
+      switch (line->status) {
       case Status::E: {
-        line->line.status = Status::S;
+        line->status = Status::S;
       } break;
       case Status::M: {
         pending_bus_request = std::make_tuple(
             request, CACHE_FLUSH_MULTIPLIER * cache.num_words_per_set - 1);
-        line->line.status = Status::S;
+        line->status = Status::S;
       } break;
       default: {
         break;
@@ -171,14 +171,14 @@ public:
     }
     case BusRequestType::BusRdX: {
       // Invalidation request
-      switch (line->line.status) {
+      switch (line->status) {
       case Status::M: {
         pending_bus_request = std::make_tuple(
             request, CACHE_FLUSH_MULTIPLIER * cache.num_words_per_set - 1);
-        line->line.status = Status::I;
+        line->status = Status::I;
       } break;
       default: {
-        line->line.status = Status::I;
+        line->status = Status::I;
         break;
       }
       }
@@ -204,16 +204,16 @@ private:
    * @return uint32_t
    */
   auto propose_evict(std::shared_ptr<CacheSet<Status>> set)
-      -> std::shared_ptr<ProtectedCacheLine<Status>> {
+      -> std::shared_ptr<CacheLine<Status>> {
     auto line_idx = 0;
     auto oldest_line_idx = 0;
     auto oldest = 0;
     for (auto &line : set->lines) {
-      if (line->line.status == Status::I) {
+      if (line->status == Status::I) {
         // Evict this line
         return line;
-      } else if (line->line.last_used <= oldest) {
-        oldest = line->line.last_used;
+      } else if (line->last_used <= oldest) {
+        oldest = line->last_used;
         oldest_line_idx = line_idx;
       }
       line_idx += 1;
@@ -223,10 +223,10 @@ private:
   }
 
   auto is_address_present(uint32_t set_index, uint32_t tag)
-      -> std::tuple<std::shared_ptr<ProtectedCacheLine<Status>>, bool> {
+      -> std::tuple<std::shared_ptr<CacheLine<Status>>, bool> {
     auto &set = cache.sets.at(set_index);
     for (auto &line : set->lines) {
-      if (line->line.tag == tag && line->line.status != Status::I) {
+      if (line->tag == tag && line->status != Status::I) {
         // Tag is in cache and is valid
         return {line, true};
       }

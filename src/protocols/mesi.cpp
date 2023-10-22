@@ -25,7 +25,7 @@ auto to_string(const MESIStatus &status) -> std::string {
 // TODO: Complete MESI Protocol
 auto MESIProtocol::handle_read_miss(
     int controller_id, std::shared_ptr<Bus> bus, ParsedAddress parsed_address,
-    std::shared_ptr<ProtectedCacheLine<Status>> &line,
+    std::shared_ptr<CacheLine<Status>> &line,
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
         &cache_controllers,
     int32_t curr_cycle) -> Instruction {
@@ -40,8 +40,8 @@ auto MESIProtocol::handle_read_miss(
   std::stringstream ss;
   ss << "Cycle: " << curr_cycle << "\n"
      << "Processor " << controller_id << " requests READ at address "
-     << parsed_address.address << "\n\tLine: " << to_string(line->line)
-     << "\n\t>>> " << to_string(line->line) << std::endl;
+     << parsed_address.address << "\n\tLine: " << to_string(line) << "\n\t>>> "
+     << to_string(line) << std::endl;
   std::cout << ss.str();
 
   // Send BusRd request
@@ -85,9 +85,9 @@ auto MESIProtocol::handle_read_miss(
   bus->num_responses = 0;
 
   // Update cache line
-  line->line.tag = parsed_address.tag;
-  line->line.last_used = curr_cycle;
-  std::cout << "\t<<< " << to_string(line->line) << std::endl;
+  line->tag = parsed_address.tag;
+  line->last_used = curr_cycle;
+  std::cout << "\t<<< " << to_string(line) << std::endl;
 
   if (!is_shared) {
     // Memory read incurs 100 cycles cost
@@ -100,7 +100,7 @@ auto MESIProtocol::handle_read_miss(
 
 auto MESIProtocol::handle_write_miss(
     int controller_id, std::shared_ptr<Bus> bus, ParsedAddress parsed_address,
-    std::shared_ptr<ProtectedCacheLine<Status>> &line,
+    std::shared_ptr<CacheLine<Status>> &line,
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
         &cache_controllers,
     int32_t curr_cycle) -> Instruction {
@@ -115,8 +115,8 @@ auto MESIProtocol::handle_write_miss(
   std::stringstream ss;
   ss << "Cycle: " << curr_cycle << "\n"
      << "Processor " << controller_id << " requests WRITE at address "
-     << parsed_address.address << "\n\tLine: " << to_string(line->line)
-     << "\n\t>>> " << to_string(line->line) << std::endl;
+     << parsed_address.address << "\n\tLine: " << to_string(line)
+     << "\n\t>>> " << to_string(line) << std::endl;
   std::cout << ss.str();
 
   // Send BusRdX request
@@ -130,26 +130,26 @@ auto MESIProtocol::handle_write_miss(
   }
 
   // TODO: dummy bus request and response
-  line->line.tag = parsed_address.tag;
-  line->line.status = Status::M;
-  line->line.last_used = curr_cycle;
+  line->tag = parsed_address.tag;
+  line->status = Status::M;
+  line->last_used = curr_cycle;
 
   return Instruction{InstructionType::OTHER, READ_MISS_PENALTY - 1};
 }
 
-auto MESIProtocol::handle_read_hit(
-    std::shared_ptr<Bus> bus, ParsedAddress address,
-    std::shared_ptr<ProtectedCacheLine<Status>> &line, int32_t curr_cycle)
-    -> Instruction {
+auto MESIProtocol::handle_read_hit(std::shared_ptr<Bus> bus,
+                                   ParsedAddress address,
+                                   std::shared_ptr<CacheLine<Status>> &line,
+                                   int32_t curr_cycle) -> Instruction {
 
   //   auto request = BusRequest{BusRequestType::BusRdX, address};
   //   bus->submit_request(request);
   return Instruction{InstructionType::OTHER, 0};
 }
 
-auto MESIProtocol::handle_write_hit(
-    std::shared_ptr<Bus> bus, ParsedAddress address,
-    std::shared_ptr<ProtectedCacheLine<Status>> &line, int32_t curr_cycle)
-    -> Instruction {
+auto MESIProtocol::handle_write_hit(std::shared_ptr<Bus> bus,
+                                    ParsedAddress address,
+                                    std::shared_ptr<CacheLine<Status>> &line,
+                                    int32_t curr_cycle) -> Instruction {
   return Instruction{InstructionType::OTHER, 0};
 }

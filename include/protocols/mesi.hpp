@@ -26,7 +26,7 @@ public:
   static auto
   handle_read_miss(int controller_id, std::shared_ptr<Bus> bus,
                    ParsedAddress parsed_address,
-                   std::shared_ptr<ProtectedCacheLine<Status>> &line,
+                   std::shared_ptr<CacheLine<Status>> &line,
                    std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
                        &cache_controllers,
                    int32_t curr_cycle) -> Instruction;
@@ -34,7 +34,7 @@ public:
   static auto
   handle_write_miss(int controller_id, std::shared_ptr<Bus> bus,
                     ParsedAddress address,
-                    std::shared_ptr<ProtectedCacheLine<Status>> &line,
+                    std::shared_ptr<CacheLine<Status>> &line,
                     std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
                         &cache_controllers,
                     int32_t curr_cycle) -> Instruction;
@@ -47,11 +47,11 @@ public:
    * @return Instruction
    */
   static auto handle_read_hit(std::shared_ptr<Bus> bus, ParsedAddress address,
-                              std::shared_ptr<ProtectedCacheLine<Status>> &line,
+                              std::shared_ptr<CacheLine<Status>> &line,
                               int32_t curr_cycle) -> Instruction;
 
   static auto
   handle_write_hit(std::shared_ptr<Bus> bus, ParsedAddress address,
-                   std::shared_ptr<ProtectedCacheLine<Status>> &line,
+                   std::shared_ptr<CacheLine<Status>> &line,
                    int32_t curr_cycle) -> Instruction;
 };

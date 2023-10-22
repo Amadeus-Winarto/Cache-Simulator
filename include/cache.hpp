@@ -40,21 +40,24 @@ auto to_string(const CacheLine<Status> &cache_line) -> std::string {
          ", status: " + to_string(cache_line.status) + "}";
 }
 
-template <typename Status> struct ProtectedCacheLine {
-  CacheLine<Status> line;
-
-  ProtectedCacheLine(uint32_t set_index) : line(set_index) {}
-};
+template <typename Status>
+auto to_string(std::shared_ptr<CacheLine<Status>> cache_line) -> std::string {
+  if (!cache_line) {
+    return "Invalid line!";
+  } else {
+    return to_string(*cache_line);
+  };
+}
 
 template <typename Status> class CacheSet {
 public:
-  std::vector<std::shared_ptr<ProtectedCacheLine<Status>>> lines;
+  std::vector<std::shared_ptr<CacheLine<Status>>> lines;
   const uint32_t set_index;
 
   CacheSet(uint32_t set_index, int associativity)
       : lines(associativity), set_index(set_index) {
     for (auto &line : lines) {
-      line = std::make_shared<ProtectedCacheLine<Status>>(set_index);
+      line = std::make_shared<CacheLine<Status>>(set_index);
     }
   }
 };
@@ -101,14 +104,14 @@ private:
 
     auto &set = sets.at(set_index);
 
-    auto line = [&]() -> std::shared_ptr<ProtectedCacheLine<Status>> {
+    auto line = [&]() -> std::shared_ptr<CacheLine<Status>> {
       for (auto &line : set->lines) {
         if (line->tag == tag) {
           // Tag is in cache
           return line;
         }
       }
-      return std::shared_ptr<ProtectedCacheLine<Status>>{nullptr};
+      return std::shared_ptr<CacheLine<Status>>{nullptr};
     }();
 
     if (line) {
