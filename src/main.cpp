@@ -89,19 +89,23 @@ int main(int argc, char **argv) {
     while (i < num_ready) {
       auto core = ready_cores.front();
       ready_cores.pop_front();
-      auto instr = core->run_once(cycle);
-      if (instr) {
-        ready_cores.push_back(core);
-      } else {
-        expired_cores.push_back(core);
-      }
+      core->run_once(cycle);
+      ready_cores.push_back(core);
+
+      // if (instr) {
+      //   ready_cores.push_back(core);
+      // } else {
+      //   expired_cores.push_back(core);
+      // }
       i++;
     }
 
-    if (ready_cores.size() == 0) {
-      // All cores have run. Re-schedule cores
-      ready_cores = expired_cores;
-      expired_cores.clear();
+    // if (ready_cores.size() == 0) {
+    //   // All cores have run. Re-schedule cores
+    //   ready_cores = expired_cores;
+    //   expired_cores.clear();
+    // }
+
     }
     cycle++;
   }
