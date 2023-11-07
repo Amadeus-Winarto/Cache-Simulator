@@ -117,19 +117,12 @@ int main(int argc, char **argv) {
       core->run_once(cycle);
       ready_cores.push_back(core);
 
-      // if (instr) {
-      //   ready_cores.push_back(core);
-      // } else {
-      //   expired_cores.push_back(core);
-      // }
+      if (core->is_done()) {
+        stats_accum->on_run_end(core->get_processor_id(), cycle);
+      }
+
       i++;
     }
-
-    // if (ready_cores.size() == 0) {
-    //   // All cores have run. Re-schedule cores
-    //   ready_cores = expired_cores;
-    //   expired_cores.clear();
-    // }
 
     if (cycle % 1000000 == 0) {
       std::cout << "Cycle: " << cycle << std::endl;
@@ -144,11 +137,11 @@ int main(int argc, char **argv) {
       << "-------------------------SIMULATION END-------------------------"
       << std::endl;
 
-  std::cout << *stats_accum << std::endl;
-
   for (const auto &core : ready_cores) {
     core->get_interesting_cache_lines();
   }
+
+  std::cout << *stats_accum << std::endl;
 
   std::for_each(cache_controllers.begin(), cache_controllers.end(),
                 [](auto &&cc) { cc->deregister_cache_controllers(); });
