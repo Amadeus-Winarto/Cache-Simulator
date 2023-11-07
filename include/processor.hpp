@@ -27,6 +27,10 @@ public:
       : processor_id(processor_id), instruction_queue(instruction_queue),
         cache_controller(cache_controller), stats_accum(stats_accum){};
 
+  auto progress() -> float {
+    return curr_idx / static_cast<float>(instruction_queue.size()) * 100.0f;
+  }
+
   auto get_processor_id() -> int { return processor_id; }
 
   auto is_done() -> bool {

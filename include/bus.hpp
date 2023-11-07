@@ -6,7 +6,7 @@
 #include <optional>
 #include <vector>
 
-enum class BusRequestType { BusRd, BusRdX, Flush };
+enum class BusRequestType { BusRd, BusRdX, BusUpd, Flush };
 
 struct BusRequest {
   BusRequestType type;
@@ -26,6 +26,8 @@ private:
   std::list<int> registration_queue;
 
 public:
+  bool already_flush = false;
+
   // Request Line
   std::optional<BusRequest> request_queue;
 

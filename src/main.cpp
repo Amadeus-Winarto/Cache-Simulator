@@ -113,32 +113,29 @@ int main(int argc, char **argv) {
     while (i < num_ready) {
       auto core = ready_cores.front();
       ready_cores.pop_front();
-      auto instr = core->run_once(cycle);
-      if (instr) {
-        ready_cores.push_back(core);
-      } else {
-        expired_cores.push_back(core);
-      }
+      core->run_once(cycle);
+      ready_cores.push_back(core);
 
       // if (instr) {
-      //   std::cout << "Core " << core->get_processor_id() << " "
-      //             << to_string(instr.value()) << std::endl;
+      //   ready_cores.push_back(core);
+      // } else {
+      //   expired_cores.push_back(core);
       // }
-
-      if (cycle >= 912) {
-        std::exit(1);
-      }
-
-      if (core->is_done()) {
-        stats_accum->on_run_end(core->get_processor_id(), cycle);
-      }
       i++;
     }
 
-    if (ready_cores.size() == 0) {
-      // All cores have run. Re-schedule cores
-      ready_cores = expired_cores;
-      expired_cores.clear();
+    // if (ready_cores.size() == 0) {
+    //   // All cores have run. Re-schedule cores
+    //   ready_cores = expired_cores;
+    //   expired_cores.clear();
+    // }
+
+    if (cycle % 1000000 == 0) {
+      std::cout << "Cycle: " << cycle << std::endl;
+      for (auto core : ready_cores) {
+        std::cout << "\tCore " << core->get_processor_id() << ": "
+                  << core->progress() << "%" << std::endl;
+      }
     }
   }
   std::cout << std::endl;
