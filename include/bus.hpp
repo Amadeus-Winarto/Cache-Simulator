@@ -26,6 +26,8 @@ private:
   std::list<int> registration_queue;
 
 public:
+  bool already_flush = false;
+
   // Request Line
   std::optional<BusRequest> request_queue;
 
