@@ -1,6 +1,7 @@
 #pragma once
 #include "bus.hpp"
 #include "cache_controller.hpp"
+#include "statistics.hpp"
 #include "trace.hpp"
 
 #include <cstdint>
@@ -17,12 +18,14 @@ template <typename Protocol> class Processor {
 
   std::vector<Instruction> instruction_queue;
   std::shared_ptr<CacheController<Protocol>> cache_controller;
+  std::shared_ptr<StatisticsAccumulator> stats_accum;
 
 public:
   Processor(int processor_id, const std::vector<Instruction> &instruction_queue,
-            std::shared_ptr<CacheController<Protocol>> cache_controller)
+            std::shared_ptr<CacheController<Protocol>> cache_controller,
+            std::shared_ptr<StatisticsAccumulator> stats_accum)
       : processor_id(processor_id), instruction_queue(instruction_queue),
-        cache_controller(cache_controller){};
+        cache_controller(cache_controller), stats_accum(stats_accum){};
 
   auto get_processor_id() -> int { return processor_id; }
 
@@ -56,6 +59,7 @@ public:
         // Instruction is completed -> retire instruction
         curr_instr = std::nullopt;
       }
+      stats_accum->on_compute_instr_end(get_processor_id(), curr_cycle);
       return curr_instr;
     }
     default: {

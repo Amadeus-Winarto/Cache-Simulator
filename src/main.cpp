@@ -4,6 +4,7 @@
 #include "memory_controller.hpp"
 #include "parser.hpp"
 #include "processor.hpp"
+#include "statistics.hpp"
 #include "trace.hpp"
 
 #include "protocols/mesi.hpp"
@@ -40,7 +41,29 @@ int main(int argc, char **argv) {
   std::cout << "Associativity: " << associativity << std::endl;
   std::cout << "Block size: " << block_size << std::endl;
 
+  auto stats_accum = std::make_shared<StatisticsAccumulator>(NUM_CORES);
+
   auto traces = parse_traces(path_str);
+  // Register traces information
+  int i = 0;
+  for (auto &trace : traces) {
+
+    stats_accum->register_num_loads(
+        i, std::count_if(trace.begin(), trace.end(), [](const auto &instr) {
+          return instr.label == InstructionType::READ;
+        }));
+
+    stats_accum->register_num_stores(
+        i, std::count_if(trace.begin(), trace.end(), [](const auto &instr) {
+          return instr.label == InstructionType::WRITE;
+        }));
+
+    stats_accum->register_num_computes(
+        i, std::count_if(trace.begin(), trace.end(), [](const auto &instr) {
+          return instr.label == InstructionType::OTHER;
+        }));
+    i++;
+  }
 
   // Get Cache Protocol
   using MESIProcessor = Processor<MESIProtocol>;
@@ -69,12 +92,13 @@ int main(int argc, char **argv) {
   auto ready_cores = std::list<std::shared_ptr<MESIProcessor>>{};
   for (int i = 0; i < NUM_CORES; i++) {
     ready_cores.emplace_back(std::make_shared<MESIProcessor>(
-        i, traces.at(i), cache_controllers.at(i)));
+        i, traces.at(i), cache_controllers.at(i), stats_accum));
   }
   auto expired_cores = std::list<std::shared_ptr<MESIProcessor>>{};
 
   // Run simulation
-  int cycle = 0;
+  int cycle = -1;
+  std::vector<int> cycle_completions(NUM_CORES, -1);
 
   std::cout << std::endl;
   std::cout
@@ -83,7 +107,7 @@ int main(int argc, char **argv) {
 
   while (std::any_of(ready_cores.begin(), ready_cores.end(),
                      [](auto &core) { return !core->is_done(); })) {
-
+    cycle++;
     const int num_ready = ready_cores.size();
     int i = 0;
     while (i < num_ready) {
@@ -95,6 +119,19 @@ int main(int argc, char **argv) {
       } else {
         expired_cores.push_back(core);
       }
+
+      // if (instr) {
+      //   std::cout << "Core " << core->get_processor_id() << " "
+      //             << to_string(instr.value()) << std::endl;
+      // }
+
+      if (cycle >= 912) {
+        std::exit(1);
+      }
+
+      if (core->is_done()) {
+        stats_accum->on_run_end(core->get_processor_id(), cycle);
+      }
       i++;
     }
 
@@ -103,13 +140,13 @@ int main(int argc, char **argv) {
       ready_cores = expired_cores;
       expired_cores.clear();
     }
-    cycle++;
   }
   std::cout << std::endl;
   std::cout
       << "-------------------------SIMULATION END-------------------------"
       << std::endl;
-  std::cout << "Simulation complete at cycle: " << cycle << std::endl;
+
+  std::cout << *stats_accum << std::endl;
 
   for (const auto &core : ready_cores) {
     core->get_interesting_cache_lines();

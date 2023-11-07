@@ -22,6 +22,7 @@ target_compile_definitions(mesi PRIVATE DEBUG_FLAG)
 
 add_executable(coherence
     src/main.cpp
+    src/statistics.cpp
     src/parser.cpp
     src/cache.cpp
     src/bus.cpp

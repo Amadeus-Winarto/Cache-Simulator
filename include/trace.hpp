@@ -6,7 +6,7 @@
 #include "vector"
 
 // TODO: Extend this to 4 cores
-constexpr auto NUM_CORES = 2;
+constexpr auto NUM_CORES = 4;
 
 enum InstructionType { READ = 0, WRITE = 1, OTHER = 2 };
 using Value = uint32_t;
