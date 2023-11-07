@@ -47,18 +47,18 @@ auto MESIProtocol::handle_read_miss(
   std::cout << ss.str();
 #endif
 
-  if (line->status == MESIStatus::M) {
-    // Write-back to Memory
+  if (line->status == MESIStatus::M && bus->already_flush == false) {
+    // Write-back to Memory if the line is dirty and have not been flushed
     const auto request = BusRequest{BusRequestType::Flush,
                                     parsed_address.address, controller_id};
     bus->request_queue = request;
     if (memory_controller->receive_bus_request(request)) {
-      // Write-back completed! Invalidate the line so that the next time it is
-      // called, it goes back to read-miss
+      // Write-back completed! Set already_flush to true so that the next time
+      // it is called, it does not write-back again
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
 #endif
-      line->status = MESIStatus::I;
+      bus->already_flush = true;
     } else {
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Writing LRU to memory" << std::endl;
@@ -164,18 +164,18 @@ auto MESIProtocol::handle_write_miss(
   std::cout << ss.str();
 #endif
 
-  if (line->status == MESIStatus::M) {
+  if (line->status == MESIStatus::M && bus->already_flush == false) {
     // Write-back to Memory
     const auto request = BusRequest{BusRequestType::Flush,
                                     parsed_address.address, controller_id};
     bus->request_queue = request;
     if (memory_controller->receive_bus_request(request)) {
-      // Write-back completed! Invalidate the line so that the next time it is
-      // called, it goes back to read-miss
+      // Write-back completed! Set already_flush to true so that the next time
+      // it is called, it does not write-back again
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
 #endif
-      line->status = MESIStatus::I;
+      bus->already_flush = true;
     } else {
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Writing LRU to memory" << std::endl;
