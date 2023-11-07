@@ -3,6 +3,7 @@
 
 StatisticsAccumulator::StatisticsAccumulator(int num_cores)
     : num_loads(num_cores), num_stores(num_cores), num_computes(num_cores),
+      num_read_hits(num_cores), num_write_hits(num_cores),
       cycles_completion(num_cores, -1), cycles_others(num_cores, -1) {}
 
 void StatisticsAccumulator::register_num_loads(int processor_id,
@@ -33,6 +34,14 @@ void StatisticsAccumulator::on_compute_instr_end(int processor_id,
   }
 }
 
+void StatisticsAccumulator::on_read_hit(int processor_id, int cycle_count) {
+  num_read_hits.at(processor_id) += 1;
+}
+
+void StatisticsAccumulator::on_write_hit(int processor_id, int cycle_count) {
+  num_write_hits.at(processor_id) += 1;
+}
+
 auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
     -> std::ostream & {
   const auto max_cycle =
@@ -56,6 +65,21 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
     os << "\t Core " << i << ": " << p.num_loads.at(i) + p.num_stores.at(i)
        << " instructions\n";
   }
+
+  os << "Read Hits:\n";
+  for (auto i = 0; i < p.num_read_hits.size(); i++) {
+    auto hits = p.num_read_hits.at(i);
+    auto hit_rate = hits / static_cast<float>(p.num_loads.at(i)) * 100.0;
+    os << "\t Core " << i << ": " << hits << " (" << hit_rate << "%)\n";
+  }
+
+  os << "Write Hits:\n";
+  for (auto i = 0; i < p.num_write_hits.size(); i++) {
+    auto hits = p.num_write_hits.at(i);
+    auto hit_rate = hits / static_cast<float>(p.num_stores.at(i)) * 100.0;
+    os << "\t Core " << i << ": " << hits << " (" << hit_rate << "%)\n";
+  }
+
   os << "---------------------------------------------\n";
   return os;
 }

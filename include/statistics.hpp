@@ -9,6 +9,9 @@ private:
   std::vector<int> num_stores;
   std::vector<int> num_computes;
 
+  std::vector<int> num_read_hits;
+  std::vector<int> num_write_hits;
+
   std::vector<int> cycles_completion;
   std::vector<int> cycles_others;
 
@@ -21,6 +24,9 @@ public:
 
   void on_run_end(int processor_id, int cycle_count);
   void on_compute_instr_end(int processor_id, int cycle_count);
+
+  void on_read_hit(int processor_id, int cycle_count);
+  void on_write_hit(int processor_id, int cycle_count);
 
   friend auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
       -> std::ostream &;
