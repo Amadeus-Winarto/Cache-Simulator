@@ -6,7 +6,7 @@
 #include <optional>
 #include <vector>
 
-enum class BusRequestType { BusRd, BusRdX, Flush };
+enum class BusRequestType { BusRd, BusRdX, BusUpd, Flush };
 
 struct BusRequest {
   BusRequestType type;
