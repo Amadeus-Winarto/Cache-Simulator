@@ -106,6 +106,12 @@ int main(int argc, char **argv) {
     //   expired_cores.clear();
     // }
 
+    if (cycle % 1000000 == 0) {
+      std::cout << "Cycle: " << cycle << std::endl;
+      for (auto core : ready_cores) {
+        std::cout << "\tCore " << core->get_processor_id() << ": "
+                  << core->progress() << "%" << std::endl;
+      }
     }
     cycle++;
   }
