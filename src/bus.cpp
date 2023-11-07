@@ -30,7 +30,6 @@ void Bus::release(int controller_id) {
   if (owner_id && owner_id.value() == controller_id) {
     owner_id = std::nullopt;
   }
-
   already_flush = false;
 }
 

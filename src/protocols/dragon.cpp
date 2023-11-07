@@ -48,7 +48,7 @@ auto DragonProtocol::handle_read_miss(
   std::cout << ss.str();
 #endif
 
-  if (line->status == DragonStatus::) {
+  if ((line->status == DragonStatus::M || line ->status == DragonStatus::Sm && bus->already_flush == false)) {
     // Write-back to Memory
     const auto request = BusRequest{BusRequestType::Flush,
                                     parsed_address.address, controller_id};
@@ -59,7 +59,6 @@ auto DragonProtocol::handle_read_miss(
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
 #endif
-      line->status = MESIStatus::I;
     } else {
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Writing LRU to memory" << std::endl;
@@ -117,7 +116,7 @@ auto DragonProtocol::handle_read_miss(
       // Memory-to-cache transfer completed ->  Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
-      line->status = Status::E;
+      line->status = DragonStatus::E;
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
@@ -134,7 +133,7 @@ auto DragonProtocol::handle_read_miss(
     // Cache-to-cache transfer completed -> Update cache line
     line->tag = parsed_address.tag;
     line->last_used = curr_cycle;
-    line->status = Status::S;
+    line->status = DragonStatus::Sm;
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
@@ -166,7 +165,7 @@ auto DragonProtocol::handle_write_miss(
   std::cout << ss.str();
 #endif
 
-  if (line->status == DragonStatus::M || line ->status == DragonStatus::Sm) {
+  if ((line->status == DragonStatus::M || line ->status == DragonStatus::Sm && bus->already_flush == false)) {
     // Write-back to Memory
     const auto request = BusRequest{BusRequestType::Flush,
                                     parsed_address.address, controller_id};
@@ -177,7 +176,6 @@ auto DragonProtocol::handle_write_miss(
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
 #endif
-      line->status = DragonStatus::I;
     } else {
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Writing LRU to memory" << std::endl;
@@ -190,33 +188,34 @@ auto DragonProtocol::handle_write_miss(
   // Send BusUpd
   auto request =
       BusRequest{BusRequestType::BusUpd, parsed_address.address, controller_id};
+  
+  if(line->status == DragonStatus::Sm){
+    bus->request_queue = request;
     
-  bus->request_queue = request;
-
-  // Wait for response
-  for (auto cache_controller : cache_controllers) {
-    cache_controller->receive_bus_request();
-  }
-
-  // Check if any of the response is a PENDING response
-  bool is_waiting = false;
-  for (auto i = 0; i < NUM_CORES; i++) {
-    if (bus->response_wait_bits.at(i) == true) {
-      is_waiting = true;
-
-      // Reset the pending cache's information
-      bus->response_valid_bits.at(i) = false;
-      break;
+    // Wait for response
+    for (auto cache_controller : cache_controllers) {
+      cache_controller->receive_bus_request();
     }
-  }
 
-  if (is_waiting) {
-#ifdef DEBUG_FLAG
-    std::cout << "\t<<< Waiting for Cache..." << std::endl;
-#endif
-    // We are waiting for another cache to respond -> cannot process instruction
-    // -> return the same instruction
-    return instruction;
+    // Check if any of the response is a PENDING response
+    bool is_waiting = false;
+    for (auto i = 0; i < NUM_CORES; i++) {
+      if (bus->response_wait_bits.at(i) == true) {
+        is_waiting = true;
+
+        // Reset the pending cache's information
+        bus->response_valid_bits.at(i) = false;
+        break;
+      }
+    }
+    if (is_waiting) {
+      #ifdef DEBUG_FLAG
+        std::cout << "\t<<< Waiting for Cache..." << std::endl;
+      #endif
+      // We are waiting for another cache to respond -> cannot process instruction
+      // -> return the same instruction
+      return instruction;
+    }  
   }
 
   // Read response
@@ -271,7 +270,6 @@ auto DragonProtocol::handle_read_hit(
   if (!bus->acquire(controller_id)) {
     return instruction;
   }
-
   // No bus transaction generated -> return immediately
   bus->release(controller_id);
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
