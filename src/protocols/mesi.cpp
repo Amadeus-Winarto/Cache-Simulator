@@ -263,14 +263,8 @@ auto MESIProtocol::handle_read_hit(
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>> &,
     std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>>,
     std::shared_ptr<MemoryController>) -> Instruction {
-  const auto instruction =
-      Instruction{InstructionType::READ, std::nullopt, parsed_address.address};
-  if (!bus->acquire(controller_id)) {
-    return instruction;
-  }
 
-  // No bus transaction generated -> return immediately
-  bus->release(controller_id);
+  // Optimisation: allow read hits to be processed without acquiring the bus
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
