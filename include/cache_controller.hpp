@@ -192,11 +192,14 @@ private:
       -> std::shared_ptr<CacheLine<Status>> {
     auto line_idx = 0;
     auto oldest_line_idx = 0;
-    auto oldest = 0;
+    auto oldest = -1;
     for (auto &line : set->lines) {
       if (line->status == Status::I) {
         // Evict this line
         return line;
+      } else if (oldest == -1) { // First line
+        oldest = line->last_used;
+        oldest_line_idx = line_idx;
       } else if (line->last_used <= oldest) {
         oldest = line->last_used;
         oldest_line_idx = line_idx;
