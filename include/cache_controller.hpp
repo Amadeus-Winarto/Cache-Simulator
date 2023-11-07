@@ -2,6 +2,7 @@
 #include "bus.hpp"
 #include "cache.hpp"
 #include "memory_controller.hpp"
+#include "statistics.hpp"
 #include "trace.hpp"
 
 #include <cstdint>
@@ -28,12 +29,16 @@ public:
   std::vector<std::shared_ptr<CacheController<Protocol>>> cache_controllers;
   std::shared_ptr<MemoryController> memory_controller;
 
+  std::shared_ptr<StatisticsAccumulator> stats_accum;
+
 public:
   CacheController(int id, int cache_size, int associativity, int block_size,
                   std::shared_ptr<Bus> bus,
-                  std::shared_ptr<MemoryController> memory_controller)
+                  std::shared_ptr<MemoryController> memory_controller,
+                  std::shared_ptr<StatisticsAccumulator> stats_accum)
       : controller_id(id), cache(cache_size, associativity, block_size),
-        bus(bus), memory_controller(memory_controller) {}
+        bus(bus), memory_controller(memory_controller),
+        stats_accum(stats_accum) {}
 
   void register_cache_controllers(
       std::vector<std::shared_ptr<CacheController<Protocol>>>
@@ -66,11 +71,13 @@ public:
       if (is_hit) {
         switch (instr_type) {
         case InstructionType::READ: {
+          stats_accum->on_read_hit(controller_id, curr_cycle);
           return Protocol::handle_read_hit(controller_id, curr_cycle, parsed,
                                            cache_controllers, bus, line,
                                            memory_controller);
         }
         case InstructionType::WRITE: {
+          stats_accum->on_write_hit(controller_id, curr_cycle);
           return Protocol::handle_write_hit(controller_id, curr_cycle, parsed,
                                             cache_controllers, bus, line,
                                             memory_controller);

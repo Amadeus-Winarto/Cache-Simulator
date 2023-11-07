@@ -81,7 +81,8 @@ int main(int argc, char **argv) {
   for (int i = 0; i < NUM_CORES; i++) {
     cache_controllers.emplace_back(
         std::make_shared<CacheController<MESIProtocol>>(
-            i, cache_size, associativity, block_size, bus, memory_controller));
+            i, cache_size, associativity, block_size, bus, memory_controller,
+            stats_accum));
   }
   std::for_each(cache_controllers.begin(), cache_controllers.end(),
                 [&cache_controllers](auto &&cc) {
