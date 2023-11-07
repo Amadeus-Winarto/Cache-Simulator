@@ -293,6 +293,7 @@ auto MESIProtocol::handle_write_hit(
   }
   case MESIStatus::E: {
     bus->release(controller_id);
+    line->status = MESIStatus::M;
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
   case MESIStatus::S: {
