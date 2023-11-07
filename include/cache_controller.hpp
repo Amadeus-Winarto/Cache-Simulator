@@ -71,16 +71,23 @@ public:
       if (is_hit) {
         switch (instr_type) {
         case InstructionType::READ: {
-          stats_accum->on_read_hit(controller_id, curr_cycle);
-          return Protocol::handle_read_hit(controller_id, curr_cycle, parsed,
-                                           cache_controllers, bus, line,
-                                           memory_controller);
+          auto instr = Protocol::handle_read_hit(controller_id, curr_cycle,
+                                                 parsed, cache_controllers, bus,
+                                                 line, memory_controller);
+
+          if (is_null_instr(instr)) {
+            stats_accum->on_read_hit(controller_id, curr_cycle);
+          }
+          return instr;
         }
         case InstructionType::WRITE: {
-          stats_accum->on_write_hit(controller_id, curr_cycle);
-          return Protocol::handle_write_hit(controller_id, curr_cycle, parsed,
-                                            cache_controllers, bus, line,
-                                            memory_controller);
+          auto instr = Protocol::handle_write_hit(controller_id, curr_cycle,
+                                                  parsed, cache_controllers,
+                                                  bus, line, memory_controller);
+          if (is_null_instr(instr)) {
+            stats_accum->on_write_hit(controller_id, curr_cycle);
+          }
+          return instr;
         }
         default:
           return Instruction{InstructionType::OTHER, 0, std::nullopt};

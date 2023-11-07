@@ -21,6 +21,8 @@ public:
       : label(label), num_cycles(num_cycles), address(address) {}
 };
 
+auto is_null_instr(const Instruction &instr) -> bool;
+
 auto parse_traces(std::string path_str)
     -> std::array<std::vector<Instruction>, NUM_CORES>;
 

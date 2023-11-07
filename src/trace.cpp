@@ -22,6 +22,11 @@ static constexpr auto read_instruction_type(int x)
   }
 }
 
+auto is_null_instr(const Instruction &instr) -> bool {
+  return instr.label == InstructionType::OTHER && instr.num_cycles == 0 &&
+         instr.address == std::nullopt;
+}
+
 auto read_trace(const std::filesystem::path &path) -> std::vector<Instruction> {
   auto filestream = std::ifstream{path.c_str(), std::ios::binary};
   auto instructions = std::vector<Instruction>{};
