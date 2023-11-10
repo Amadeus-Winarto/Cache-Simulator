@@ -22,7 +22,7 @@ template <typename Protocol> struct CacheController {
 public:
   using Status = typename Protocol::Status;
   int controller_id = 0;
-  std::optional<std::tuple<BusRequest, int>> pending_bus_request;
+  std::shared_ptr<std::tuple<BusRequest, int>> pending_bus_request;
   Cache<Protocol> cache;
   std::shared_ptr<Bus> bus;
 
@@ -125,7 +125,11 @@ public:
   }
 
   void receive_bus_request() {
-    if (bus->response_valid_bits.at(controller_id)) {
+    if (bus->response_completed_bits.at(controller_id)) {
+#ifdef DEBUG_FLAG
+      std::cout << "Cache " << controller_id << " already responded!"
+                << std::endl;
+#endif
       // Response is given already -> ignore
       return;
     }
@@ -133,43 +137,23 @@ public:
     const auto &request = bus->request_queue.value();
     // Always ignore requests from the same cache
     if (request.controller_id == controller_id) {
-      bus->response_valid_bits.at(controller_id) = true;
+      bus->response_completed_bits.at(controller_id) = true;
       bus->response_is_present_bits.at(controller_id) = false;
+#ifdef DEBUG_FLAG
+      std::cout << "Cache " << controller_id << " is issuer -> Skip response!"
+                << std::endl;
+#endif
+
       return;
     }
 
-    // Respond to request
     auto parsed_address = parse_address(request.address);
     auto [line, is_hit] =
         is_address_present(parsed_address.set_index, parsed_address.tag);
 
-    if (pending_bus_request) {
-      // There is a pending request -> serve that
-      // Invariant: the pending request is the same as the incoming request,
-      // due to atomic bus
-
-      auto [request, cycles_left] = pending_bus_request.value();
-      bus->response_valid_bits.at(controller_id) = true;
-      bus->response_is_present_bits.at(controller_id) = true;
-      if (--cycles_left > 0) {
-        pending_bus_request = std::make_tuple(request, cycles_left);
-        bus->response_wait_bits.at(controller_id) = true;
-      } else {
-        pending_bus_request = std::nullopt;
-        bus->response_wait_bits.at(controller_id) = false;
-      }
-    } else {
-      bus->response_is_present_bits.at(controller_id) = is_hit;
-      bus->response_wait_bits.at(controller_id) = is_hit;
-      bus->response_valid_bits.at(controller_id) = true;
-
-      if (is_hit) {
-        pending_bus_request =
-            std::make_tuple(request, 2 * cache.num_words_per_line - 1);
-      }
-    }
-    // Downgrade status if necessary
-    Protocol::state_transition(request, line);
+    pending_bus_request = Protocol::handle_bus_request(
+        request, bus, controller_id, pending_bus_request, is_hit,
+        cache.num_words_per_line, line);
     return;
   }
 

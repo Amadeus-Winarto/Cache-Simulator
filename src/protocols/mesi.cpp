@@ -41,7 +41,7 @@ auto MESIProtocol::handle_read_miss(
 #ifdef DEBUG_FLAG
   std::stringstream ss;
   ss << "Cycle: " << curr_cycle << "\n"
-     << "Processor " << controller_id << " requests READ at address "
+     << "Processor " << controller_id << " requests READ MISS at address "
      << parsed_address.address << "\n\tLine: " << to_string(line) << "\n\t>>> "
      << to_string(line) << std::endl;
   std::cout << ss.str();
@@ -85,7 +85,7 @@ auto MESIProtocol::handle_read_miss(
       is_waiting = true;
 
       // Reset the pending cache's information
-      bus->response_valid_bits.at(i) = false;
+      bus->response_completed_bits.at(i) = false;
       break;
     }
   }
@@ -106,8 +106,8 @@ auto MESIProtocol::handle_read_miss(
                   [](bool acc, bool is_present) { return acc || is_present; });
 
   // Invalidate all responses
-  std::for_each(bus->response_valid_bits.begin(),
-                bus->response_valid_bits.end(),
+  std::for_each(bus->response_completed_bits.begin(),
+                bus->response_completed_bits.end(),
                 [](auto &&valid_bit) { valid_bit = false; });
 
   if (!is_shared) {
@@ -158,7 +158,7 @@ auto MESIProtocol::handle_write_miss(
 #ifdef DEBUG_FLAG
   std::stringstream ss;
   ss << "Cycle: " << curr_cycle << "\n"
-     << "Processor " << controller_id << " requests WRITE at address "
+     << "Processor " << controller_id << " requests WRITE MISS at address "
      << parsed_address.address << "\n\tLine: " << to_string(line) << "\n\t>>> "
      << to_string(line) << std::endl;
   std::cout << ss.str();
@@ -202,7 +202,7 @@ auto MESIProtocol::handle_write_miss(
       is_waiting = true;
 
       // Reset the pending cache's information
-      bus->response_valid_bits.at(i) = false;
+      bus->response_completed_bits.at(i) = false;
       break;
     }
   }
@@ -223,8 +223,8 @@ auto MESIProtocol::handle_write_miss(
                   [](bool acc, bool is_present) { return acc || is_present; });
 
   // Invalidate all responses
-  std::for_each(bus->response_valid_bits.begin(),
-                bus->response_valid_bits.end(),
+  std::for_each(bus->response_completed_bits.begin(),
+                bus->response_completed_bits.end(),
                 [](auto &&valid_bit) { valid_bit = false; });
 
   if (!is_shared) {
@@ -259,12 +259,28 @@ auto MESIProtocol::handle_write_miss(
 }
 
 auto MESIProtocol::handle_read_hit(
-    int controller_id, int32_t, ParsedAddress parsed_address,
+    int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>> &,
-    std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>>,
+    std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>> line,
     std::shared_ptr<MemoryController>) -> Instruction {
 
+  const auto instruction =
+      Instruction{InstructionType::READ, std::nullopt, parsed_address.address};
+  if (!bus->acquire(controller_id)) {
+    return instruction;
+  }
+
+#ifdef DEBUG_FLAG
+  std::stringstream ss;
+  ss << "Cycle: " << curr_cycle << "\n"
+     << "Processor " << controller_id << " requests READ HIT at address "
+     << parsed_address.address << "\n\tLine: " << to_string(line) << "\n\t>>> "
+     << to_string(line) << std::endl;
+  std::cout << ss.str();
+#endif
+
   // Optimisation: allow read hits to be processed without acquiring the bus
+  bus->release(controller_id);
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
@@ -280,6 +296,15 @@ auto MESIProtocol::handle_write_hit(
     return instruction;
   }
 
+#ifdef DEBUG_FLAG
+  std::stringstream ss;
+  ss << "Cycle: " << curr_cycle << "\n"
+     << "Processor " << controller_id << " requests WRITE HIT at address "
+     << parsed_address.address << "\n\tLine: " << to_string(line) << "\n\t>>> "
+     << to_string(line) << std::endl;
+  std::cout << ss.str();
+#endif
+
   switch (line->status) {
   case MESIStatus::M: {
     bus->release(controller_id);
@@ -293,10 +318,7 @@ auto MESIProtocol::handle_write_hit(
   case MESIStatus::S: {
 #ifdef DEBUG_FLAG
     std::stringstream ss;
-    ss << "Cycle: " << curr_cycle << "\n"
-       << "Processor " << controller_id << " requests SHARED WRITE at address "
-       << parsed_address.address << "\n\tLine: " << to_string(line)
-       << "\n\t>>> " << to_string(line) << std::endl;
+    ss << "\tWrite from Shared..." << std::endl;
     std::cout << ss.str();
 #endif
 
@@ -317,7 +339,7 @@ auto MESIProtocol::handle_write_hit(
         is_waiting = true;
 
         // Reset the pending cache's information
-        bus->response_valid_bits.at(i) = false;
+        bus->response_completed_bits.at(i) = false;
         break;
       }
     }
@@ -332,8 +354,8 @@ auto MESIProtocol::handle_write_hit(
     }
 
     // Invalidate all responses
-    std::for_each(bus->response_valid_bits.begin(),
-                  bus->response_valid_bits.end(),
+    std::for_each(bus->response_completed_bits.begin(),
+                  bus->response_completed_bits.end(),
                   [](auto &&valid_bit) { valid_bit = false; });
 
     // Update cache line
@@ -349,6 +371,7 @@ auto MESIProtocol::handle_write_hit(
   }
   case MESIStatus::I: {
     // Impossible!
+    std::cout << "Impossible!" << std::endl;
     return instruction;
   }
   }
@@ -393,4 +416,66 @@ auto MESIProtocol::state_transition(const BusRequest &request,
     std::exit(0);
     break;
   };
+}
+
+auto MESIProtocol::handle_bus_request(
+    const BusRequest &request, std::shared_ptr<Bus> bus, int32_t controller_id,
+    std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
+    bool is_hit, int32_t num_words_per_line,
+    std::shared_ptr<CacheLine<MESIStatus>> line)
+    -> std::shared_ptr<std::tuple<BusRequest, int32_t>> {
+  // Respond to request
+  if (!pending_bus_request) {
+#ifdef DEBUG_FLAG
+    std::cout << "Cache " << controller_id << " is not busy -> Serve request"
+              << std::endl;
+#endif
+
+    bus->response_is_present_bits.at(controller_id) = is_hit;
+    bus->response_wait_bits.at(controller_id) = is_hit;
+
+    if (is_hit) {
+#ifdef DEBUG_FLAG
+      std::cout << "\tCache " << controller_id
+                << " is hit! Initiate cache-to-cache transfer" << std::endl;
+#endif
+      return std::make_shared<std::tuple<BusRequest, int32_t>>(
+          std::make_tuple(request, 2 * num_words_per_line - 1));
+    } else {
+#ifdef DEBUG_FLAG
+      std::cout << "\tCache " << controller_id << " is miss!" << std::endl;
+#endif
+      bus->response_completed_bits.at(controller_id) = true;
+      MESIProtocol::state_transition(request, line);
+      return nullptr;
+    }
+  } else {
+#ifdef DEBUG_FLAG
+    std::cout << "Cache " << controller_id << " sending cache line..."
+              << std::endl;
+#endif
+
+    // There is a pending request -> serve that
+    // Invariant: the pending request is the same as the incoming request,
+    // due to atomic bus
+    auto [request, cycles_left] = *pending_bus_request;
+
+    bus->response_is_present_bits.at(controller_id) = true;
+    if (cycles_left > 1) {
+      bus->response_wait_bits.at(controller_id) = true;
+      return std::make_shared<std::tuple<BusRequest, int32_t>>(
+          std::make_tuple(request, cycles_left - 1));
+    } else {
+#ifdef DEBUG_FLAG
+      std::cout << "\tCache " << controller_id << " finished sending cache line"
+                << std::endl;
+#endif
+      bus->response_completed_bits.at(controller_id) = true;
+      bus->response_wait_bits.at(controller_id) = false;
+
+      // Downgrade status if necessary
+      MESIProtocol::state_transition(request, line);
+      return nullptr;
+    }
+  }
 }

@@ -31,5 +31,4 @@ add_executable(coherence
 )
 target_link_libraries(coherence PRIVATE argparse trace mesi)
 target_compile_features(coherence PRIVATE cxx_std_20)
-
 target_compile_options(coherence PRIVATE -Wall -Wpedantic -O3)

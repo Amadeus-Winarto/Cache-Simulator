@@ -2,7 +2,7 @@
 #include <iostream>
 
 Bus::Bus(int num_processors)
-    : response_valid_bits(num_processors, false),
+    : response_completed_bits(num_processors, false),
       response_is_present_bits(num_processors, false),
       response_wait_bits(num_processors, false){};
 

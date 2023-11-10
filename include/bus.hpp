@@ -32,7 +32,7 @@ public:
   std::optional<BusRequest> request_queue;
 
   // Response Line(s)
-  std::vector<bool> response_valid_bits;
+  std::vector<bool> response_completed_bits;
   std::vector<bool> response_is_present_bits;
   std::vector<bool> response_wait_bits;
 
