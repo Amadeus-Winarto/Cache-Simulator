@@ -74,11 +74,11 @@ public:
   std::vector<std::shared_ptr<CacheSet<Status>>> sets;
 
   Cache(int cache_size, int associativity, int block_size)
-      : num_offset_bits(std::log2(block_size)),
+      : num_offset_bits(std::log2(block_size * 8 / WORD_SIZE)),
         num_sets((cache_size / associativity) /
                  block_size), // 64 Sets -> set_index goes from 0 to 63
         num_set_index_bits(std::log2(num_sets)), // 6 bits to address 64 sets
-        num_words_per_line(std::pow(2, num_offset_bits) / (WORD_SIZE >> 3)),
+        num_words_per_line(std::pow(2, num_offset_bits)),
         sets(num_sets) {
 
     for (int i = 0; i < num_sets; i++) {
