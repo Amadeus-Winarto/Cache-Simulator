@@ -37,9 +37,9 @@ int main(int argc, char **argv) {
 
   std::cout << "Protocol: " << protocol << std::endl;
   std::cout << "Input file: " << path_str << std::endl;
-  std::cout << "Cache size: " << cache_size << std::endl;
+  std::cout << "Cache size: " << cache_size << " bytes" << std::endl;
   std::cout << "Associativity: " << associativity << std::endl;
-  std::cout << "Block size: " << block_size << std::endl;
+  std::cout << "Block size: " << block_size << " bytes" << std::endl;
 
   auto stats_accum = std::make_shared<StatisticsAccumulator>(NUM_CORES);
 
