@@ -1,6 +1,9 @@
 #pragma once
 
+#include <functional>
 #include <iostream>
+#include <map>
+#include <optional>
 #include <vector>
 
 class StatisticsAccumulator {
@@ -15,6 +18,11 @@ private:
   std::vector<int> cycles_completion;
   std::vector<int> cycles_others;
 
+  std::vector<int> num_idles;
+
+  std::vector<std::array<std::map<int, int>, 2>> cache_accesses;
+  std::optional<std::function<std::string(int)>> state_parser;
+
 public:
   StatisticsAccumulator(int num_cores);
 
@@ -25,8 +33,16 @@ public:
   void on_run_end(int processor_id, int cycle_count);
   void on_compute_instr_end(int processor_id, int cycle_count);
 
-  void on_read_hit(int processor_id, int cycle_count);
-  void on_write_hit(int processor_id, int cycle_count);
+  void on_read_hit(int processor_id, int state_id, int cycle_count);
+  void on_write_hit(int processor_id, int state_id, int cycle_count);
+
+  void on_idle(int processor_id, int cycle_count);
+
+  // void on_cache_access(int processor_id, int state_id);
+
+  void register_state_parser(std::function<std::string(int)> parser) {
+    state_parser = parser;
+  }
 
   friend auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
       -> std::ostream &;

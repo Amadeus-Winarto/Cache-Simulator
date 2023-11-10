@@ -71,21 +71,27 @@ public:
       if (is_hit) {
         switch (instr_type) {
         case InstructionType::READ: {
+          const auto state = line->status;
           auto instr = Protocol::handle_read_hit(controller_id, curr_cycle,
                                                  parsed, cache_controllers, bus,
                                                  line, memory_controller);
 
           if (is_null_instr(instr)) {
-            stats_accum->on_read_hit(controller_id, curr_cycle);
+            stats_accum->on_read_hit(controller_id, static_cast<int>(state),
+                                     curr_cycle);
+          } else {
+            stats_accum->on_idle(controller_id, curr_cycle);
           }
           return instr;
         }
         case InstructionType::WRITE: {
+          const auto state = line->status;
           auto instr = Protocol::handle_write_hit(controller_id, curr_cycle,
                                                   parsed, cache_controllers,
                                                   bus, line, memory_controller);
           if (is_null_instr(instr)) {
-            stats_accum->on_write_hit(controller_id, curr_cycle);
+            stats_accum->on_write_hit(controller_id, static_cast<int>(state),
+                                      curr_cycle);
           }
           return instr;
         }
