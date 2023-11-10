@@ -137,9 +137,14 @@ int main(int argc, char **argv) {
       << "-------------------------SIMULATION END-------------------------"
       << std::endl;
 
+  std::cout << std::endl;
+  std::cout << "-------------------------CACHE CONTENT-------------------------"
+            << std::endl;
   for (const auto &core : ready_cores) {
     core->get_interesting_cache_lines();
   }
+  std::cout << "-------------------------CACHE END-------------------------"
+            << std::endl;
 
   std::cout << *stats_accum << std::endl;
 

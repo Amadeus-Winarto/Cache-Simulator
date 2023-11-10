@@ -331,12 +331,6 @@ auto MESIProtocol::handle_write_hit(
       return instruction;
     }
 
-    // Read response
-    auto is_shared = std::reduce(
-        bus->response_is_present_bits.begin(),
-        bus->response_is_present_bits.end(), false,
-        [](bool acc, bool is_present) { return acc || is_present; });
-
     // Invalidate all responses
     std::for_each(bus->response_valid_bits.begin(),
                   bus->response_valid_bits.end(),
@@ -394,5 +388,9 @@ auto MESIProtocol::state_transition(const BusRequest &request,
     std::cout << "FLUSH should not appear here!" << std::endl;
     std::exit(0);
   }
+  case BusRequestType::BusUpd:
+    std::cout << "BUSUPD should not appear here!" << std::endl;
+    std::exit(0);
+    break;
   };
 }
