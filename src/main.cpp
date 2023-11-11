@@ -14,6 +14,7 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -90,12 +91,11 @@ int main(int argc, char **argv) {
                 });
 
   // Create processors
-  auto ready_cores = std::list<std::shared_ptr<MESIProcessor>>{};
+  auto ready_cores = std::vector<std::shared_ptr<MESIProcessor>>{};
   for (int i = 0; i < NUM_CORES; i++) {
     ready_cores.emplace_back(std::make_shared<MESIProcessor>(
         i, traces.at(i), cache_controllers.at(i), stats_accum));
   }
-  auto expired_cores = std::list<std::shared_ptr<MESIProcessor>>{};
 
   // Run simulation
   int cycle = -1;
@@ -106,22 +106,18 @@ int main(int argc, char **argv) {
       << "-------------------------SIMULATION BEGIN-------------------------"
       << std::endl;
 
+  auto rng = std::default_random_engine{};
   while (std::any_of(ready_cores.begin(), ready_cores.end(),
                      [](auto &core) { return !core->is_done(); })) {
     cycle++;
-    const int num_ready = ready_cores.size();
-    int i = 0;
-    while (i < num_ready) {
-      auto core = ready_cores.front();
-      ready_cores.pop_front();
-      core->run_once(cycle);
-      ready_cores.push_back(core);
 
+    std::shuffle(std::begin(ready_cores), std::end(ready_cores), rng);
+
+    for (auto &core : ready_cores) {
+      core->run_once(cycle);
       if (core->is_done()) {
         stats_accum->on_run_end(core->get_processor_id(), cycle);
       }
-
-      i++;
     }
 
     if (cycle % 1000000 == 0) {
