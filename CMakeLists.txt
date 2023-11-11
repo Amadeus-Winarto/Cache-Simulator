@@ -11,6 +11,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(argparse)
 
+option(DEBUG "Enable debug mode" OFF)
+
 include_directories(include)
 
 add_library(trace STATIC src/trace.cpp)
@@ -20,6 +22,10 @@ target_compile_options(trace PRIVATE -Wall -Wpedantic -O3)
 add_library(mesi STATIC src/protocols/mesi.cpp)
 target_compile_features(mesi PRIVATE cxx_std_20)
 target_compile_options(mesi PRIVATE -Wall -Wpedantic -O3)
+
+if(DEBUG)
+    target_compile_definitions(mesi PRIVATE -DDEBUG_FLAG)
+endif()
 
 add_executable(coherence
     src/main.cpp
@@ -32,3 +38,7 @@ add_executable(coherence
 target_link_libraries(coherence PRIVATE argparse trace mesi)
 target_compile_features(coherence PRIVATE cxx_std_20)
 target_compile_options(coherence PRIVATE -Wall -Wpedantic -O3)
+
+if(DEBUG)
+    target_compile_definitions(coherence PRIVATE -DDEBUG_FLAG)
+endif()
