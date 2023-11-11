@@ -39,14 +39,17 @@ auto parser() -> argparse::ArgumentParser {
 
   program.add_argument("--cache_size")
       .default_value(4096)
+      .scan<'d', int>()
       .help("Cache size (bytes)");
 
   program.add_argument("--associativity")
       .default_value(2)
+      .scan<'d', int>()
       .help("Associativity of the cache");
 
   program.add_argument("--block_size")
       .default_value(32)
+      .scan<'d', int>()
       .help("Block size (bytes)");
   return program;
 }
