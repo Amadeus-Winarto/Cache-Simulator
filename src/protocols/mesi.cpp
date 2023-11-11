@@ -48,16 +48,15 @@ auto MESIProtocol::handle_read_miss(
 #endif
 
   if (line->status == MESIStatus::M && bus->already_flush == false) {
-    // Write-back to Memory if the line is dirty and have not been flushed
-    const auto request = BusRequest{BusRequestType::Flush,
-                                    parsed_address.address, controller_id};
-    bus->request_queue = request;
-    if (memory_controller->receive_bus_request(request)) {
-      // Write-back completed! Set already_flush to true so that the next time
-      // it is called, it does not write-back again
+    // Initiate write-back to Memory
+    if (memory_controller->write_back(parsed_address)) {
+      // Write-back completed!
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
 #endif
+
+      // Set already_flush to true so that the next time it is called, it does
+      // not write-back again
       bus->already_flush = true;
     } else {
 #ifdef DEBUG_FLAG
@@ -112,7 +111,7 @@ auto MESIProtocol::handle_read_miss(
 
   if (!is_shared) {
     // Miss: Go to memory controller
-    if (memory_controller->receive_bus_request(request)) {
+    if (memory_controller->read_data(parsed_address)) {
       // Memory-to-cache transfer completed ->  Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
@@ -166,15 +165,14 @@ auto MESIProtocol::handle_write_miss(
 
   if (line->status == MESIStatus::M && bus->already_flush == false) {
     // Write-back to Memory
-    const auto request = BusRequest{BusRequestType::Flush,
-                                    parsed_address.address, controller_id};
-    bus->request_queue = request;
-    if (memory_controller->receive_bus_request(request)) {
-      // Write-back completed! Set already_flush to true so that the next time
-      // it is called, it does not write-back again
+    if (memory_controller->write_back(parsed_address)) {
+      // Write-back completed!
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
 #endif
+
+      // Set already_flush to true so that the next time it is called, it does
+      // not write-back again
       bus->already_flush = true;
     } else {
 #ifdef DEBUG_FLAG
@@ -229,7 +227,7 @@ auto MESIProtocol::handle_write_miss(
 
   if (!is_shared) {
     // Miss: Go to memory controller
-    if (memory_controller->receive_bus_request(request)) {
+    if (memory_controller->read_data(parsed_address)) {
       // Memory-to-cache transfer completed -> Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;

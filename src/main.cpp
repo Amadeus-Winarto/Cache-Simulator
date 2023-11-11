@@ -90,6 +90,10 @@ int main(int argc, char **argv) {
                   cc->register_cache_controllers(cache_controllers);
                 });
 
+  const auto num_words_per_line =
+      cache_controllers.at(0)->cache.num_words_per_line;
+  memory_controller->set_delay(2 * num_words_per_line);
+
   // Create processors
   auto ready_cores = std::vector<std::shared_ptr<MESIProcessor>>{};
   for (int i = 0; i < NUM_CORES; i++) {
@@ -110,7 +114,7 @@ int main(int argc, char **argv) {
   while (std::any_of(ready_cores.begin(), ready_cores.end(),
                      [](auto &core) { return !core->is_done(); })) {
     cycle++;
-
+    memory_controller->run_once();
     std::shuffle(std::begin(ready_cores), std::end(ready_cores), rng);
 
     for (auto &core : ready_cores) {
