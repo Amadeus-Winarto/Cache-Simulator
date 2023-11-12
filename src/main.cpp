@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
   auto bus = std::make_shared<Bus>(NUM_CORES);
 
   // Create Memory Controller
-  auto memory_controller = std::make_shared<MemoryController>();
+  auto memory_controller = std::make_shared<MemoryController>(stats_accum);
 
   // Create Cache Controllers
   auto cache_controllers =
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
                      [](auto &core) { return !core->is_done(); })) {
     cycle++;
     memory_controller->run_once();
-    std::shuffle(std::begin(ready_cores), std::end(ready_cores), rng);
+    // std::shuffle(std::begin(ready_cores), std::end(ready_cores), rng);
 
     for (auto &core : ready_cores) {
       core->run_once(cycle);

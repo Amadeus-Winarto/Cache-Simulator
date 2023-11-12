@@ -23,6 +23,8 @@ private:
   std::vector<std::array<std::map<int, int>, 2>> cache_accesses;
   std::optional<std::function<std::string(int)>> state_parser;
 
+  int num_write_backs;
+
 public:
   StatisticsAccumulator(int num_cores);
 
@@ -43,6 +45,8 @@ public:
   void register_state_parser(std::function<std::string(int)> parser) {
     state_parser = parser;
   }
+
+  void on_write_back();
 
   friend auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
       -> std::ostream &;

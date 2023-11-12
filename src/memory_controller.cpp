@@ -8,18 +8,30 @@ auto MemoryController::set_delay(int delay) -> void {
 #endif
 }
 
+auto MemoryController::is_done() -> bool {
+#ifdef USE_WRITE_BUFFER
+  return write_buffer.is_empty();
+#else
+  return (!pending_write_back || pending_write_back.value() == 0);
+#endif
+}
+
 auto MemoryController::run_once() -> void {
 #ifdef USE_WRITE_BUFFER
-  write_buffer.run_once();
+  if (write_buffer.run_once()) {
+    stats_accum->on_write_back();
+  };
 #else
-  if (pending_write_back) {
+  if (pending_write_back && pending_write_back.value() > 0) {
     pending_write_back = pending_write_back.value() - 1;
   }
 #endif
 
-  if (pending_data_read) {
+  if (pending_data_read && pending_data_read.value() > 0) {
     pending_data_read = pending_data_read.value() - 1;
   }
+
+  return;
 }
 
 auto MemoryController::write_back(ParsedAddress parsed_address) -> bool {
@@ -69,7 +81,9 @@ auto MemoryController::simple_write_back(ParsedAddress parsed_address) -> bool {
     pending_write_back = pending_write_back.value() - 1;
     return false;
   } else {
+    std::cout << "Write back completed" << std::endl;
     pending_write_back = std::nullopt;
+    stats_accum->on_write_back();
     return true;
   }
 }

@@ -51,6 +51,8 @@ void StatisticsAccumulator::on_idle(int processor_id, int cycle_count) {
   num_idles.at(processor_id) += 1;
 }
 
+void StatisticsAccumulator::on_write_back() { num_write_backs += 1; }
+
 // void StatisticsAccumulator::on_cache_access(int processor_id, int state_id) {
 //   cache_accesses.at(processor_id)[state_id] += 1;
 // }
@@ -209,6 +211,8 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
          << count * 100. / p.num_write_hits.at(i) << "%)\n";
     }
   }
+
+  os << "Write Backs: " << p.num_write_backs << "\n";
 
   os << "---------------------------------------------\n";
   return os;
