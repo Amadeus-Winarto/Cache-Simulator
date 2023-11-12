@@ -77,14 +77,12 @@ auto MemoryController::simple_write_back(ParsedAddress parsed_address) -> bool {
   if (!pending_write_back) {
     pending_write_back = MEMORY_MISS_PENALTY - 1;
     return false;
-  } else if (pending_write_back && pending_write_back.value() > 0) {
-    pending_write_back = pending_write_back.value() - 1;
-    return false;
-  } else {
-    std::cout << "Write back completed" << std::endl;
+  } else if (pending_write_back && pending_write_back.value() == 0) {
     pending_write_back = std::nullopt;
     stats_accum->on_write_back();
     return true;
+  } else {
+    return false;
   }
 }
 

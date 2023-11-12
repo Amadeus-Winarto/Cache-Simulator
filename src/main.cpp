@@ -8,6 +8,7 @@
 #include "trace.hpp"
 
 #include "protocols/mesi.hpp"
+#include "protocols/dragon.hpp"
 
 #include <algorithm>
 #include <array>
@@ -68,6 +69,10 @@ int main(int argc, char **argv) {
 
   // Get Cache Protocol
   using MESIProcessor = Processor<MESIProtocol>;
+  using MESICacheController = CacheController<MESIProtocol>;
+
+  using DragonProcessor = Processor<DragonProtocol>;
+  using DragonCacheController = CacheController<DragonProtocol>;
 
   // Create Bus
   auto bus = std::make_shared<Bus>(NUM_CORES);

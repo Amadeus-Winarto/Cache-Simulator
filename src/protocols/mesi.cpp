@@ -444,7 +444,6 @@ auto MESIProtocol::handle_bus_request(
       std::cout << "\tCache " << controller_id << " is miss!" << std::endl;
 #endif
       bus->response_completed_bits.at(controller_id) = true;
-      MESIProtocol::state_transition(request, line);
       return nullptr;
     }
   } else {

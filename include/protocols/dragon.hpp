@@ -12,7 +12,7 @@
 #include <optional>
 #include <vector>
 
-enum class DragonStatus {
+enum class DragonStatus { 
   E = 3,
   Sm = 2,
   Sc = 1,
@@ -55,4 +55,12 @@ public:
   static auto state_transition(const BusRequest &request,
                                std::shared_ptr<CacheLine<DragonStatus>> line)
       -> void;
+
+    static auto handle_bus_request(
+      const BusRequest &request, std::shared_ptr<Bus> bus,
+      int32_t controller_id,
+      std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
+      bool is_hit, int32_t num_words_per_line,
+      std::shared_ptr<CacheLine<DragonStatus>> line)
+      -> std::shared_ptr<std::tuple<BusRequest, int32_t>>;
 };

@@ -12,7 +12,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(argparse)
 
 option(DEBUG "Enable debug mode" OFF)
-option(USE_WRITE_BUFFER "Enable write buffer" OFF)
+option(USE_WRITE_BUFFER "Enable write buffer" ON)
 
 include_directories(include)
 
@@ -23,6 +23,10 @@ target_compile_options(trace PRIVATE -Wall -Wpedantic -O3)
 add_library(mesi STATIC src/protocols/mesi.cpp)
 target_compile_features(mesi PRIVATE cxx_std_20)
 target_compile_options(mesi PRIVATE -Wall -Wpedantic -O3)
+
+add_library(dragon STATIC src/protocols/dragon.cpp)
+target_compile_features(dragon PRIVATE cxx_std_20)
+target_compile_options(dragon PRIVATE -Wall -Wpedantic -O3)
 
 if(DEBUG)
     target_compile_definitions(mesi PRIVATE -DDEBUG_FLAG)
