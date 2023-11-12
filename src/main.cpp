@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
                      [](auto &core) { return !core->is_done(); })) {
     cycle++;
     memory_controller->run_once();
-    std::shuffle(std::begin(ready_cores), std::end(ready_cores), rng);
+    // std::shuffle(std::begin(ready_cores), std::end(ready_cores), rng);
 
     for (auto &core : ready_cores) {
       core->run_once(cycle);
