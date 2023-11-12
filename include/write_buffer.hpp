@@ -19,7 +19,9 @@ public:
 
   auto add_to_queue(ParsedAddress parsed_address) -> bool;
 
-  auto run_once() -> void;
+  auto run_once() -> bool;
+
+  auto is_empty() -> bool;
 
   auto remove_if_present(ParsedAddress parsed_address) -> bool;
 };

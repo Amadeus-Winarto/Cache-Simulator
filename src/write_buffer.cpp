@@ -1,8 +1,10 @@
 #include "write_buffer.hpp"
 
-auto MESIWriteBuffer::run_once() -> void {
+auto MESIWriteBuffer::is_empty() -> bool { return queue.empty(); }
+
+auto MESIWriteBuffer::run_once() -> bool {
   if (queue.empty()) {
-    return;
+    return false;
   }
   // Write front of queue to memory
   queue.front() = std::make_tuple(std::get<0>(queue.front()),
@@ -10,7 +12,9 @@ auto MESIWriteBuffer::run_once() -> void {
   if (std::get<1>(queue.front()) == 0) {
     // If write is done, remove from queue
     queue.erase(queue.begin());
+    return true;
   }
+  return false;
 }
 
 auto MESIWriteBuffer::add_to_queue(ParsedAddress parsed_address) -> bool {
