@@ -21,6 +21,8 @@ private:
 
   std::vector<int> num_idles;
 
+  std::vector<int> num_invalidates;
+
   std::vector<std::array<std::map<int, int>, 2>> cache_accesses;
   std::optional<std::function<std::string(int)>> state_parser;
 
@@ -42,6 +44,8 @@ public:
   void on_idle(int processor_id, int cycle_count);
 
   // void on_cache_access(int processor_id, int state_id);
+
+  void on_invalidate(int processor_id);
 
   void register_state_parser(std::function<std::string(int)> parser) {
     state_parser = parser;

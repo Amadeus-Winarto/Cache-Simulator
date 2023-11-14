@@ -420,7 +420,8 @@ auto MESIProtocol::handle_bus_request(
     const BusRequest &request, std::shared_ptr<Bus> bus, int32_t controller_id,
     std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
     bool is_hit, int32_t num_words_per_line,
-    std::shared_ptr<CacheLine<MESIStatus>> line)
+    std::shared_ptr<CacheLine<MESIStatus>> line,
+    std::shared_ptr<StatisticsAccumulator> stats_accum)
     -> std::shared_ptr<std::tuple<BusRequest, int32_t>> {
   // Respond to request
   if (!pending_bus_request) {
@@ -471,6 +472,9 @@ auto MESIProtocol::handle_bus_request(
       bus->response_wait_bits.at(controller_id) = false;
 
       // Downgrade status if necessary
+      if (request.type == BusRequestType::BusRdX) {
+        stats_accum->on_invalidate(controller_id);
+      }
       MESIProtocol::state_transition(request, line);
       return nullptr;
     }

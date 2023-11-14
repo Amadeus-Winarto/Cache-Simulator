@@ -418,7 +418,8 @@ auto DragonProtocol::handle_bus_request(
     const BusRequest &request, std::shared_ptr<Bus> bus, int32_t controller_id,
     std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
     bool is_hit, int32_t num_words_per_line,
-    std::shared_ptr<CacheLine<DragonStatus>> line)
+    std::shared_ptr<CacheLine<DragonStatus>> line,
+    std::shared_ptr<StatisticsAccumulator> stats_accum)
     -> std::shared_ptr<std::tuple<BusRequest, int32_t>> {
   // Respond to request
   if (!pending_bus_request) {
@@ -444,6 +445,7 @@ auto DragonProtocol::handle_bus_request(
                 << std::endl;
 #endif
       // wait 2 cycles
+      stats_accum->on_invalidate(controller_id);
       return std::make_shared<std::tuple<BusRequest, int32_t>>(
           std::make_tuple(request, 2 - 1));
     } else {

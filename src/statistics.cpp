@@ -8,7 +8,8 @@ StatisticsAccumulator::StatisticsAccumulator(int num_cores)
       num_computes_instr(num_cores), num_read_hits(num_cores),
       num_write_hits(num_cores), num_computes(num_cores),
       cycles_completion(num_cores, -1), cycles_others(num_cores, -1),
-      num_idles(num_cores), cache_accesses(num_cores) {}
+      num_idles(num_cores), num_invalidates(num_cores),
+      cache_accesses(num_cores) {}
 
 void StatisticsAccumulator::register_num_loads(int processor_id,
                                                int num_instr) {
@@ -52,6 +53,10 @@ void StatisticsAccumulator::on_idle(int processor_id, int cycle_count) {
 }
 
 void StatisticsAccumulator::on_write_back() { num_write_backs += 1; }
+
+void StatisticsAccumulator::on_invalidate(int processor_id) {
+  num_invalidates.at(processor_id) += 1;
+}
 
 // void StatisticsAccumulator::on_cache_access(int processor_id, int state_id) {
 //   cache_accesses.at(processor_id)[state_id] += 1;
@@ -210,6 +215,11 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
   }
 
   os << "Write Backs: " << p.num_write_backs << "\n";
+
+  os << "Num. Invalidates/Updates: \n";
+  for (auto i = 0; i < p.num_invalidates.size(); i++) {
+    os << "\t Core " << i << ": " << p.num_invalidates.at(i) << "\n";
+  }
 
   os << "---------------------------------------------\n";
   return os;

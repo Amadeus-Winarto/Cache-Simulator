@@ -4,6 +4,7 @@
 #include "cache.hpp"
 #include "cache_controller.hpp"
 #include "memory_controller.hpp"
+#include "statistics.hpp"
 #include "trace.hpp"
 
 #include <array>
@@ -68,6 +69,7 @@ public:
       int32_t controller_id,
       std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
       bool is_hit, int32_t num_words_per_line,
-      std::shared_ptr<CacheLine<MESIStatus>> line)
+      std::shared_ptr<CacheLine<MESIStatus>> line,
+      std::shared_ptr<StatisticsAccumulator> stats_accum)
       -> std::shared_ptr<std::tuple<BusRequest, int32_t>>;
 };
