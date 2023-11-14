@@ -41,7 +41,7 @@ add_executable(coherence
     src/memory_controller.cpp
     src/write_buffer.cpp
 )
-target_link_libraries(coherence PRIVATE argparse trace mesi)
+target_link_libraries(coherence PRIVATE argparse trace mesi dragon)
 target_compile_features(coherence PRIVATE cxx_std_20)
 target_compile_options(coherence PRIVATE -Wall -Wpedantic -O3)
 
