@@ -4,24 +4,25 @@
 #include <string>
 
 StatisticsAccumulator::StatisticsAccumulator(int num_cores)
-    : num_loads(num_cores), num_stores(num_cores), num_computes(num_cores),
-      num_read_hits(num_cores), num_write_hits(num_cores),
+    : num_loads_instr(num_cores), num_stores_instr(num_cores),
+      num_computes_instr(num_cores), num_read_hits(num_cores),
+      num_write_hits(num_cores), num_computes(num_cores),
       cycles_completion(num_cores, -1), cycles_others(num_cores, -1),
       num_idles(num_cores), cache_accesses(num_cores) {}
 
 void StatisticsAccumulator::register_num_loads(int processor_id,
                                                int num_instr) {
-  num_loads.at(processor_id) = num_instr;
+  num_loads_instr.at(processor_id) = num_instr;
 }
 
 void StatisticsAccumulator::register_num_stores(int processor_id,
                                                 int num_instr) {
-  num_stores.at(processor_id) = num_instr;
+  num_stores_instr.at(processor_id) = num_instr;
 }
 
 void StatisticsAccumulator::register_num_computes(int processor_id,
                                                   int num_instr) {
-  num_computes.at(processor_id) = num_instr;
+  num_computes_instr.at(processor_id) = num_instr;
 }
 
 void StatisticsAccumulator::on_run_end(int processor_id, int cycle_count) {
@@ -30,9 +31,8 @@ void StatisticsAccumulator::on_run_end(int processor_id, int cycle_count) {
   }
 }
 
-void StatisticsAccumulator::on_compute_instr_end(int processor_id,
-                                                 int cycle_count) {
-  cycles_others.at(processor_id) = cycle_count;
+void StatisticsAccumulator::on_compute(int processor_id) {
+  num_computes.at(processor_id) += 1;
 }
 
 void StatisticsAccumulator::on_read_hit(int processor_id, int state_id,
@@ -69,44 +69,40 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
        << " completes at cycle: " << p.cycles_completion.at(i) << "\n";
   }
 
-  os << "Compute cycles per core:\n";
+  os << "Number of Compute Cycles:\n";
   for (auto i = 0; i < p.cycles_others.size(); i++) {
-    os << "\t Core " << i << " completes at cycle: " << p.cycles_others.at(i)
-       << "\n";
+    os << "\t Core " << i << ": " << p.num_computes.at(i) << "\n";
   }
 
-  os << "Number of Computes:\n";
+  os << "Number of Loads/Stores Instructions:\n";
   for (auto i = 0; i < p.cycles_others.size(); i++) {
-    os << "\t Core " << i << ": " << p.num_computes.at(i) << " instructions\n";
-  }
-
-  os << "Number of Loads/Stores:\n";
-  for (auto i = 0; i < p.cycles_others.size(); i++) {
-    os << "\t Core " << i << ": " << p.num_loads.at(i) + p.num_stores.at(i)
+    os << "\t Core " << i << ": "
+       << p.num_loads_instr.at(i) + p.num_stores_instr.at(i)
        << " instructions\n";
   }
 
   os << "Read Hits:\n";
   for (auto i = 0; i < p.num_read_hits.size(); i++) {
     auto hits = p.num_read_hits.at(i);
-    auto hit_rate = hits / static_cast<float>(p.num_loads.at(i)) * 100.0;
+    auto hit_rate = hits / static_cast<float>(p.num_loads_instr.at(i)) * 100.0;
     os << "\t Core " << i << ": " << hits << " (" << hit_rate << "%)\n";
   }
 
   os << "Write Hits:\n";
   for (auto i = 0; i < p.num_write_hits.size(); i++) {
     auto hits = p.num_write_hits.at(i);
-    auto hit_rate = hits / static_cast<float>(p.num_stores.at(i)) * 100.0;
+    auto hit_rate = hits / static_cast<float>(p.num_stores_instr.at(i)) * 100.0;
     os << "\t Core " << i << ": " << hits << " (" << hit_rate << "%)\n";
   }
 
   os << "Cache Misses:\n";
   for (auto i = 0; i < p.num_write_hits.size(); i++) {
     auto hits = p.num_write_hits.at(i) + p.num_read_hits.at(i);
-    auto hit_rate = hits /
-                    static_cast<float>(p.num_loads.at(i) + p.num_stores.at(i)) *
-                    100.0;
-    auto miss = p.num_loads.at(i) + p.num_stores.at(i) - hits;
+    auto hit_rate =
+        hits /
+        static_cast<float>(p.num_loads_instr.at(i) + p.num_stores_instr.at(i)) *
+        100.0;
+    auto miss = p.num_loads_instr.at(i) + p.num_stores_instr.at(i) - hits;
     auto miss_rate = 100.0 - hit_rate;
 
     os << "\t Core " << i << ": " << miss << " (" << miss_rate << "%)\n";
@@ -114,7 +110,8 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
 
   os << "Instruction Per Cycle:\n";
   for (auto i = 0; i < p.cycles_completion.size(); i++) {
-    auto instr = p.num_loads.at(i) + p.num_stores.at(i) + p.num_computes.at(i);
+    auto instr = p.num_loads_instr.at(i) + p.num_stores_instr.at(i) +
+                 p.num_computes_instr.at(i);
     auto ipc = instr / static_cast<float>(p.cycles_completion.at(i));
     os << "\t Core " << i << ": " << ipc << "\n";
   }

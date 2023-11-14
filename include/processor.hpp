@@ -63,7 +63,7 @@ public:
         // Instruction is completed -> retire instruction
         curr_instr = std::nullopt;
       }
-      stats_accum->on_compute_instr_end(get_processor_id(), curr_cycle);
+      stats_accum->on_compute(get_processor_id());
       return curr_instr;
     }
     default: {

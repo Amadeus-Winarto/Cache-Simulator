@@ -8,12 +8,13 @@
 
 class StatisticsAccumulator {
 private:
-  std::vector<int> num_loads;
-  std::vector<int> num_stores;
-  std::vector<int> num_computes;
+  std::vector<int> num_loads_instr;
+  std::vector<int> num_stores_instr;
+  std::vector<int> num_computes_instr;
 
   std::vector<int> num_read_hits;
   std::vector<int> num_write_hits;
+  std::vector<int> num_computes;
 
   std::vector<int> cycles_completion;
   std::vector<int> cycles_others;
@@ -33,7 +34,7 @@ public:
   void register_num_computes(int processor_id, int num_computes);
 
   void on_run_end(int processor_id, int cycle_count);
-  void on_compute_instr_end(int processor_id, int cycle_count);
+  void on_compute(int processor_id);
 
   void on_read_hit(int processor_id, int state_id, int cycle_count);
   void on_write_hit(int processor_id, int state_id, int cycle_count);
