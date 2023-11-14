@@ -23,6 +23,9 @@
 #include <variant>
 #include <vector>
 
+static constexpr int PRINT_INTERVAL = 1000000;
+static constexpr char UNIT = 'M';
+
 // Get Cache Protocol
 using MESIProcessor = Processor<MESIProtocol>;
 using MESICacheController = CacheController<MESIProtocol>;
@@ -189,8 +192,8 @@ int main(int argc, char **argv) {
         },
         variant_caches_and_cores);
 
-    if (cycle % 1000000 == 0) {
-      std::cout << "Cycle: " << cycle << std::endl;
+    if (cycle % PRINT_INTERVAL == 0) {
+      std::cout << "Cycle: " << (cycle / PRINT_INTERVAL) << UNIT << std::endl;
       std::visit(
           [](auto &&arg) {
             auto cores = std::get<1>(arg);
