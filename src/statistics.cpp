@@ -1,4 +1,5 @@
 #include "statistics.hpp"
+#include "cache.hpp"
 #include <algorithm>
 #include <numeric>
 #include <string>
@@ -56,6 +57,10 @@ void StatisticsAccumulator::on_idle(int processor_id, int cycle_count) {
 }
 
 void StatisticsAccumulator::on_write_back() { num_write_backs += 1; }
+
+void StatisticsAccumulator::on_bus_traffic(int num_words) {
+  num_bus_traffic += num_words;
+}
 
 void StatisticsAccumulator::on_invalidate(int processor_id) {
   num_invalidates.at(processor_id) += 1;
@@ -213,6 +218,8 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
          << count * 100. / p.num_write_hits.at(i) << "%)\n";
     }
   }
+
+  os << "Bus Traffic: " << p.num_bus_traffic * (WORD_SIZE >> 3) << " bytes\n";
 
   os << "Write Backs: " << p.num_write_backs << "\n";
 

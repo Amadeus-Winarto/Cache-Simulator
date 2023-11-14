@@ -32,7 +32,8 @@ auto DragonProtocol::handle_read_miss(
     std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
         &cache_controllers,
     std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>> line,
-    std::shared_ptr<MemoryController> memory_controller) -> Instruction {
+    std::shared_ptr<MemoryController> memory_controller,
+    std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::READ, std::nullopt, parsed_address.address};
   if (!bus->acquire(controller_id)) {
@@ -59,6 +60,8 @@ auto DragonProtocol::handle_read_miss(
 #endif
       // Set already_flush to true so that the next time it is called, it does
       // not write-back again
+      stats_accum->on_bus_traffic(
+          cache_controllers.at(controller_id)->cache.num_words_per_line);
       bus->already_flush = true;
     } else {
 #ifdef DEBUG_FLAG
@@ -121,6 +124,8 @@ auto DragonProtocol::handle_read_miss(
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
+      stats_accum->on_bus_traffic(
+          cache_controllers.at(controller_id)->cache.num_words_per_line);
       bus->release(controller_id);
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } else {
@@ -139,6 +144,8 @@ auto DragonProtocol::handle_read_miss(
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
 
+    stats_accum->on_bus_traffic(
+        cache_controllers.at(controller_id)->cache.num_words_per_line);
     bus->release(controller_id);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
@@ -149,7 +156,8 @@ auto DragonProtocol::handle_write_miss(
     std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
         &cache_controllers,
     std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>> line,
-    std::shared_ptr<MemoryController> memory_controller) -> Instruction {
+    std::shared_ptr<MemoryController> memory_controller,
+    std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::WRITE, std::nullopt, parsed_address.address};
 
@@ -180,6 +188,8 @@ auto DragonProtocol::handle_write_miss(
       // Set already_flush to true so that the next time it is called, it does
       // not write-back again
       bus->already_flush = true;
+      stats_accum->on_bus_traffic(
+          cache_controllers.at(controller_id)->cache.num_words_per_line);
     } else {
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Writing LRU to memory" << std::endl;
@@ -252,6 +262,8 @@ auto DragonProtocol::handle_write_miss(
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
+      stats_accum->on_bus_traffic(
+          cache_controllers.at(controller_id)->cache.num_words_per_line);
       bus->release(controller_id);
       return Instruction{InstructionType::OTHER, 0, std::nullopt};
     } else {
@@ -263,6 +275,9 @@ auto DragonProtocol::handle_write_miss(
   }
 
   // Invariant: Cache definitely has the data and is shared -> send BusUpd
+  stats_accum->on_bus_traffic(
+      cache_controllers.at(controller_id)->cache.num_words_per_line);
+      
   auto request =
       BusRequest{BusRequestType::BusUpd, parsed_address.address, controller_id};
 
@@ -306,6 +321,7 @@ auto DragonProtocol::handle_write_miss(
   std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
   bus->release(controller_id);
+  stats_accum->on_bus_traffic(1);
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
@@ -313,7 +329,8 @@ auto DragonProtocol::handle_read_hit(
     int controller_id, int32_t, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<DragonProtocol>>> &,
     std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>>,
-    std::shared_ptr<MemoryController>) -> Instruction {
+    std::shared_ptr<MemoryController>,
+    std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::READ, std::nullopt, parsed_address.address};
   if (!bus->acquire(controller_id)) {
@@ -329,7 +346,8 @@ auto DragonProtocol::handle_write_hit(
     std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
         &cache_controllers,
     std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>> line,
-    std::shared_ptr<MemoryController> memory_controller) -> Instruction {
+    std::shared_ptr<MemoryController> memory_controller,
+    std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::WRITE, std::nullopt, parsed_address.address};
   // try and acquire bus
@@ -406,6 +424,7 @@ auto DragonProtocol::handle_write_hit(
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
     bus->release(controller_id);
+    stats_accum->on_bus_traffic(1);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
   }

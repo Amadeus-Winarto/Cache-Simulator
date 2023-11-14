@@ -30,6 +30,7 @@ private:
   std::optional<std::function<std::string(int)>> state_parser;
 
   int num_write_backs;
+  int num_bus_traffic;
 
 public:
   StatisticsAccumulator(int num_cores, std::vector<int> private_states,
@@ -56,6 +57,8 @@ public:
   }
 
   void on_write_back();
+
+  void on_bus_traffic(int num_words);
 
   friend auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
       -> std::ostream &;

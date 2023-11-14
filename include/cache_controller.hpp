@@ -72,9 +72,9 @@ public:
         switch (instr_type) {
         case InstructionType::READ: {
           const auto state = line->status;
-          auto instr = Protocol::handle_read_hit(controller_id, curr_cycle,
-                                                 parsed, cache_controllers, bus,
-                                                 line, memory_controller);
+          auto instr = Protocol::handle_read_hit(
+              controller_id, curr_cycle, parsed, cache_controllers, bus, line,
+              memory_controller, stats_accum);
 
           if (is_null_instr(instr)) {
             stats_accum->on_read_hit(controller_id, static_cast<int>(state),
@@ -86,9 +86,9 @@ public:
         }
         case InstructionType::WRITE: {
           const auto state = line->status;
-          auto instr = Protocol::handle_write_hit(controller_id, curr_cycle,
-                                                  parsed, cache_controllers,
-                                                  bus, line, memory_controller);
+          auto instr = Protocol::handle_write_hit(
+              controller_id, curr_cycle, parsed, cache_controllers, bus, line,
+              memory_controller, stats_accum);
           if (is_null_instr(instr)) {
             stats_accum->on_write_hit(controller_id, static_cast<int>(state),
                                       curr_cycle);
@@ -103,12 +103,12 @@ public:
         case InstructionType::READ: {
           return Protocol::handle_read_miss(controller_id, curr_cycle, parsed,
                                             cache_controllers, bus, line,
-                                            memory_controller);
+                                            memory_controller, stats_accum);
         }
         case InstructionType::WRITE: {
           return Protocol::handle_write_miss(controller_id, curr_cycle, parsed,
                                              cache_controllers, bus, line,
-                                             memory_controller);
+                                             memory_controller, stats_accum);
         }
         default:
           return Instruction{InstructionType::OTHER, 0, std::nullopt};

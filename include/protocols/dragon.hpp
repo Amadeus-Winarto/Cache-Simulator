@@ -17,6 +17,11 @@ enum class DragonStatus { E = 3, Sm = 2, Sc = 1, M = 4, I = 0 };
 auto to_string(const DragonStatus &status) -> std::string;
 
 class DragonProtocol {
+private:
+  static auto state_transition(const BusRequest &request,
+                               std::shared_ptr<CacheLine<DragonStatus>> line)
+      -> void;
+
 public:
   using Status = DragonStatus;
 
@@ -25,31 +30,31 @@ public:
       std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
           &cache_controllers,
       std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>> line,
-      std::shared_ptr<MemoryController> memory_controller) -> Instruction;
+      std::shared_ptr<MemoryController> memory_controller,
+      std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction;
 
   static auto handle_write_miss(
       int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
       std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
           &cache_controllers,
       std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>> line,
-      std::shared_ptr<MemoryController> memory_controller) -> Instruction;
+      std::shared_ptr<MemoryController> memory_controller,
+      std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction;
 
   static auto handle_read_hit(
       int controller_id, int32_t, ParsedAddress,
       std::vector<std::shared_ptr<CacheController<DragonProtocol>>> &,
       std::shared_ptr<Bus>, std::shared_ptr<CacheLine<Status>>,
-      std::shared_ptr<MemoryController>) -> Instruction;
+      std::shared_ptr<MemoryController>,
+      std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction;
 
   static auto handle_write_hit(
       int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
       std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
           &cache_controllers,
       std::shared_ptr<Bus> bus, std::shared_ptr<CacheLine<Status>> line,
-      std::shared_ptr<MemoryController> memory_controller) -> Instruction;
-
-  static auto state_transition(const BusRequest &request,
-                               std::shared_ptr<CacheLine<DragonStatus>> line)
-      -> void;
+      std::shared_ptr<MemoryController> memory_controller,
+      std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction;
 
   static auto handle_bus_request(
       const BusRequest &request, std::shared_ptr<Bus> bus,
