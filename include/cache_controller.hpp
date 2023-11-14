@@ -133,7 +133,7 @@ public:
   void receive_bus_request() {
     if (bus->response_completed_bits.at(controller_id)) {
 #ifdef DEBUG_FLAG
-      std::cout << "Cache " << controller_id << " already responded!"
+      std::cout << "\t\tCache " << controller_id << " already responded!"
                 << std::endl;
 #endif
       // Response is given already -> ignore
@@ -146,8 +146,8 @@ public:
       bus->response_completed_bits.at(controller_id) = true;
       bus->response_is_present_bits.at(controller_id) = false;
 #ifdef DEBUG_FLAG
-      std::cout << "Cache " << controller_id << " is issuer -> Skip response!"
-                << std::endl;
+      std::cout << "\t\tCache " << controller_id
+                << " is issuer -> Skip response!" << std::endl;
 #endif
 
       return;

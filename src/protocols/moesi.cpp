@@ -449,8 +449,8 @@ auto MOESIProtocol::handle_bus_request(
   // Respond to request
   if (!pending_bus_request) {
 #ifdef DEBUG_FLAG
-    std::cout << "Cache " << controller_id << " is not busy -> Serve request"
-              << std::endl;
+    std::cout << "\t\tCache " << controller_id
+              << " is not busy -> Serve request" << std::endl;
 #endif
 
     bus->response_is_present_bits.at(controller_id) = is_hit;
@@ -458,7 +458,7 @@ auto MOESIProtocol::handle_bus_request(
 
     if (is_hit) {
 #ifdef DEBUG_FLAG
-      std::cout << "\tCache " << controller_id
+      std::cout << "\t\t\tCache " << controller_id
                 << " is hit! Initiate cache-to-cache transfer" << std::endl;
 #endif
       // Cache hit -> initiate cache-to-cache transfer
@@ -467,14 +467,14 @@ auto MOESIProtocol::handle_bus_request(
           std::make_tuple(request, 2 * num_words_per_line - 1));
     } else {
 #ifdef DEBUG_FLAG
-      std::cout << "\tCache " << controller_id << " is miss!" << std::endl;
+      std::cout << "\t\t\tCache " << controller_id << " is miss!" << std::endl;
 #endif
       bus->response_completed_bits.at(controller_id) = true;
       return nullptr;
     }
   } else {
 #ifdef DEBUG_FLAG
-    std::cout << "Cache " << controller_id << " sending cache line..."
+    std::cout << "\t\tCache " << controller_id << " sending cache line..."
               << std::endl;
 #endif
 
@@ -490,8 +490,8 @@ auto MOESIProtocol::handle_bus_request(
           std::make_tuple(request, cycles_left - 1));
     } else {
 #ifdef DEBUG_FLAG
-      std::cout << "\tCache " << controller_id << " finished sending cache line"
-                << std::endl;
+      std::cout << "\t\t\tCache " << controller_id
+                << " finished sending cache line" << std::endl;
 #endif
       bus->response_completed_bits.at(controller_id) = true;
       bus->response_wait_bits.at(controller_id) = false;
