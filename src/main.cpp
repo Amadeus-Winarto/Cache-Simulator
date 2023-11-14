@@ -7,8 +7,8 @@
 #include "statistics.hpp"
 #include "trace.hpp"
 
-#include "protocols/mesi.hpp"
 #include "protocols/dragon.hpp"
+#include "protocols/mesi.hpp"
 
 #include <algorithm>
 #include <array>
@@ -19,7 +19,70 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <tuple>
+#include <variant>
 #include <vector>
+
+// Get Cache Protocol
+using MESIProcessor = Processor<MESIProtocol>;
+using MESICacheController = CacheController<MESIProtocol>;
+
+using DragonProcessor = Processor<DragonProtocol>;
+using DragonCacheController = CacheController<DragonProtocol>;
+
+// Processor
+using var_t =
+    std::variant<std::tuple<std::vector<std::shared_ptr<MESICacheController>>,
+                            std::vector<std::shared_ptr<MESIProcessor>>>,
+                 std::tuple<std::vector<std::shared_ptr<DragonCacheController>>,
+                            std::vector<std::shared_ptr<DragonProcessor>>>>;
+
+template <typename Protocol>
+auto build_cache_controllers(
+    int cache_size, int associativity, int block_size, std::shared_ptr<Bus> bus,
+    std::shared_ptr<MemoryController> memory_controller,
+    std::shared_ptr<StatisticsAccumulator> stats_accum) {
+  auto cache_controllers =
+      std::vector<std::shared_ptr<CacheController<Protocol>>>{};
+  cache_controllers.reserve(NUM_CORES);
+  for (int i = 0; i < NUM_CORES; i++) {
+    cache_controllers.emplace_back(std::make_shared<CacheController<Protocol>>(
+        i, cache_size, associativity, block_size, bus, memory_controller,
+        stats_accum));
+  }
+  std::for_each(cache_controllers.begin(), cache_controllers.end(),
+                [&cache_controllers](auto &&cc) {
+                  cc->register_cache_controllers(cache_controllers);
+                });
+  return cache_controllers;
+}
+
+template <typename Protocol>
+auto build_cores(
+    std::array<std::vector<Instruction>, NUM_CORES> traces,
+    std::vector<std::shared_ptr<CacheController<Protocol>>> cache_controllers,
+    std::shared_ptr<StatisticsAccumulator> stats_accum) {
+  auto ready_cores = std::vector<std::shared_ptr<Processor<Protocol>>>{};
+  for (int i = 0; i < NUM_CORES; i++) {
+    ready_cores.emplace_back(std::make_shared<Processor<Protocol>>(
+        i, traces.at(i), cache_controllers.at(i), stats_accum));
+  }
+  return ready_cores;
+}
+
+template <typename Protocol>
+auto build_caches_and_cores(
+    int cache_size, int associativity, int block_size, std::shared_ptr<Bus> bus,
+    std::array<std::vector<Instruction>, NUM_CORES> traces,
+    std::shared_ptr<MemoryController> memory_controller,
+    std::shared_ptr<StatisticsAccumulator> stats_accum) {
+  auto cache_controllers =
+      build_cache_controllers<Protocol>(cache_size, associativity, block_size,
+                                        bus, memory_controller, stats_accum);
+  return std::make_tuple(
+      cache_controllers,
+      build_cores<Protocol>(traces, cache_controllers, stats_accum));
+}
 
 int main(int argc, char **argv) {
   auto program = parser();
@@ -67,44 +130,29 @@ int main(int argc, char **argv) {
     i++;
   }
 
-  // Get Cache Protocol
-  using MESIProcessor = Processor<MESIProtocol>;
-  using MESICacheController = CacheController<MESIProtocol>;
-
-  using DragonProcessor = Processor<DragonProtocol>;
-  using DragonCacheController = CacheController<DragonProtocol>;
-
   // Create Bus
   auto bus = std::make_shared<Bus>(NUM_CORES);
 
   // Create Memory Controller
   auto memory_controller = std::make_shared<MemoryController>(stats_accum);
 
-  // Create Cache Controllers
-  auto cache_controllers =
-      std::vector<std::shared_ptr<CacheController<MESIProtocol>>>{};
-  cache_controllers.reserve(NUM_CORES);
-  for (int i = 0; i < NUM_CORES; i++) {
-    cache_controllers.emplace_back(
-        std::make_shared<CacheController<MESIProtocol>>(
-            i, cache_size, associativity, block_size, bus, memory_controller,
-            stats_accum));
-  }
-  std::for_each(cache_controllers.begin(), cache_controllers.end(),
-                [&cache_controllers](auto &&cc) {
-                  cc->register_cache_controllers(cache_controllers);
-                });
+  // Create Cache Controllers and Processors
+  auto variant_caches_and_cores =
+      protocol == SUPPORTED_PROTOCOLS.at(0)
+          ? var_t{build_caches_and_cores<MESIProtocol>(
+                cache_size, associativity, block_size, bus, traces,
+                memory_controller, stats_accum)}
+          : var_t{build_caches_and_cores<DragonProtocol>(
+                cache_size, associativity, block_size, bus, traces,
+                memory_controller, stats_accum)};
 
-  const auto num_words_per_line =
-      cache_controllers.at(0)->cache.num_words_per_line;
+  // Initialise memory controller delay
+  const auto num_words_per_line = std::visit(
+      [](auto &&arg) -> int {
+        return std::get<0>(arg).at(0)->cache.num_words_per_line;
+      },
+      variant_caches_and_cores);
   memory_controller->set_delay(2 * num_words_per_line);
-
-  // Create processors
-  auto ready_cores = std::vector<std::shared_ptr<MESIProcessor>>{};
-  for (int i = 0; i < NUM_CORES; i++) {
-    ready_cores.emplace_back(std::make_shared<MESIProcessor>(
-        i, traces.at(i), cache_controllers.at(i), stats_accum));
-  }
 
   // Run simulation
   int cycle = -1;
@@ -116,25 +164,42 @@ int main(int argc, char **argv) {
       << std::endl;
 
   auto rng = std::default_random_engine{};
-  while (std::any_of(ready_cores.begin(), ready_cores.end(),
-                     [](auto &core) { return !core->is_done(); })) {
+
+  while (std::visit(
+      [](auto &&arg) -> bool {
+        auto cores = std::get<1>(arg);
+        return std::any_of(cores.begin(), cores.end(),
+                           [](auto &core) { return !core->is_done(); });
+      },
+      variant_caches_and_cores)) {
     cycle++;
     memory_controller->run_once();
-    // std::shuffle(std::begin(ready_cores), std::end(ready_cores), rng);
 
-    for (auto &core : ready_cores) {
-      core->run_once(cycle);
-      if (core->is_done()) {
-        stats_accum->on_run_end(core->get_processor_id(), cycle);
-      }
-    }
+    // Run each core once
+    std::visit(
+        [cycle, stats_accum](auto &&arg) {
+          auto cores = std::get<1>(arg);
+          std::for_each(
+              cores.begin(), cores.end(), [cycle, stats_accum](auto &core) {
+                core->run_once(cycle);
+                if (core->is_done()) {
+                  stats_accum->on_run_end(core->get_processor_id(), cycle);
+                }
+              });
+        },
+        variant_caches_and_cores);
 
     if (cycle % 1000000 == 0) {
       std::cout << "Cycle: " << cycle << std::endl;
-      for (auto core : ready_cores) {
-        std::cout << "\tCore " << core->get_processor_id() << ": "
-                  << core->progress() << "%" << std::endl;
-      }
+      std::visit(
+          [](auto &&arg) {
+            auto cores = std::get<1>(arg);
+            std::for_each(cores.begin(), cores.end(), [](auto &core) {
+              std::cout << "\tCore " << core->get_processor_id() << ": "
+                        << core->progress() << "%" << std::endl;
+            });
+          },
+          variant_caches_and_cores);
     }
   }
   std::cout << std::endl;
@@ -145,16 +210,25 @@ int main(int argc, char **argv) {
   std::cout << std::endl;
   std::cout << "-------------------------CACHE CONTENT-------------------------"
             << std::endl;
-  for (const auto &core : ready_cores) {
-    core->get_interesting_cache_lines();
-  }
+  std::visit(
+      [](auto &&arg) {
+        auto cores = std::get<1>(arg);
+        std::for_each(cores.begin(), cores.end(),
+                      [](auto &&core) { core->get_interesting_cache_lines(); });
+      },
+      variant_caches_and_cores);
   std::cout << "-------------------------CACHE END-------------------------"
             << std::endl;
 
   std::cout << *stats_accum << std::endl;
 
-  std::for_each(cache_controllers.begin(), cache_controllers.end(),
-                [](auto &&cc) { cc->deregister_cache_controllers(); });
+  std::visit(
+      [](auto &&arg) {
+        auto cache_controllers = std::get<0>(arg);
+        std::for_each(cache_controllers.begin(), cache_controllers.end(),
+                      [](auto &&cc) { cc->deregister_cache_controllers(); });
+      },
+      variant_caches_and_cores);
 
   return 0;
 }
