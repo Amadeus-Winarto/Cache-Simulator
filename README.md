@@ -6,6 +6,7 @@ We implemented a cache simulator for analyzing how different snooping-based cohe
 
 ## Usage
 
+```bash
 Usage: Cache Simulator [-h] [--cache_size VAR] [--associativity VAR] [--block_size VAR] protocol input_file
 
 Positional arguments:
@@ -18,6 +19,7 @@ Optional arguments:
   --cache_size          Cache size (bytes) [default: 4096]
   --associativity       Associativity of the cache [default: 2]
   --block_size          Block size (bytes) [default: 32]
+```
 
 ## Protocols
 
