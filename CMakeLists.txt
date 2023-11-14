@@ -12,7 +12,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(argparse)
 
 option(DEBUG "Enable debug mode" OFF)
-option(USE_WRITE_BUFFER "Enable write buffer" ON)
+option(USE_WRITE_BUFFER "Enable write buffer" OFF)
 
 include_directories(include)
 
