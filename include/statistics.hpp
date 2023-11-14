@@ -8,6 +8,9 @@
 
 class StatisticsAccumulator {
 private:
+  const std::vector<int> private_states;
+  const std::vector<int> public_states;
+
   std::vector<int> num_loads_instr;
   std::vector<int> num_stores_instr;
   std::vector<int> num_computes_instr;
@@ -29,7 +32,8 @@ private:
   int num_write_backs;
 
 public:
-  StatisticsAccumulator(int num_cores);
+  StatisticsAccumulator(int num_cores, std::vector<int> private_states,
+                        std::vector<int> public_states);
 
   void register_num_loads(int processor_id, int num_loads);
   void register_num_stores(int processor_id, int num_stores);

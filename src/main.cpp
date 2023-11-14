@@ -109,7 +109,13 @@ int main(int argc, char **argv) {
   std::cout << "Associativity: " << associativity << std::endl;
   std::cout << "Block size: " << block_size << " bytes" << std::endl;
 
-  auto stats_accum = std::make_shared<StatisticsAccumulator>(NUM_CORES);
+  auto private_states =
+      protocol == "MESI" ? std::vector<int>{3, 2} : std::vector<int>{3, 4};
+  auto public_states =
+      protocol == "MESI" ? std::vector<int>{1} : std::vector<int>{2, 1};
+
+  auto stats_accum = std::make_shared<StatisticsAccumulator>(
+      NUM_CORES, private_states, public_states);
 
   auto traces = parse_traces(path_str);
   // Register traces information

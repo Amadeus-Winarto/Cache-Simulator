@@ -3,8 +3,11 @@
 #include <numeric>
 #include <string>
 
-StatisticsAccumulator::StatisticsAccumulator(int num_cores)
-    : num_loads_instr(num_cores), num_stores_instr(num_cores),
+StatisticsAccumulator::StatisticsAccumulator(int num_cores,
+                                             std::vector<int> private_states,
+                                             std::vector<int> public_states)
+    : private_states(private_states), public_states(public_states),
+      num_loads_instr(num_cores), num_stores_instr(num_cores),
       num_computes_instr(num_cores), num_read_hits(num_cores),
       num_write_hits(num_cores), num_computes(num_cores),
       cycles_completion(num_cores, -1), cycles_others(num_cores, -1),
@@ -129,9 +132,6 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
     os << "\t Core " << i << ": " << idle << " (" << idle_rate << "%)\n";
   }
 
-  const auto private_states = std::vector<int>{3, 2};
-  const auto public_states = std::vector<int>{1};
-
   os << "Cache Hit Accesses:\n";
   for (auto i = 0; i < p.cache_accesses.size(); i++) {
     const auto &[reads, writes] = p.cache_accesses.at(i);
@@ -139,7 +139,7 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
     auto public_accesses = 0;
     auto public_read = 0;
     auto public_write = 0;
-    for (auto state_id : public_states) {
+    for (auto state_id : p.public_states) {
       auto read_accesses = reads.find(state_id);
       if (read_accesses != reads.end()) {
         public_accesses += read_accesses->second;
@@ -156,7 +156,7 @@ auto operator<<(std::ostream &os, const StatisticsAccumulator &p)
     auto private_accesses = 0;
     auto private_read = 0;
     auto private_write = 0;
-    for (auto state_id : private_states) {
+    for (auto state_id : p.private_states) {
       auto read_accesses = reads.find(state_id);
       if (read_accesses != reads.end()) {
         private_accesses += read_accesses->second;
