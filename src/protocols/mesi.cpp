@@ -417,15 +417,7 @@ auto MESIProtocol::state_transition(const BusRequest &request,
   }
   case BusRequestType::BusRdX: {
     // Invalidation request
-    switch (line->status) {
-    case Status::M: {
-      line->status = Status::I;
-    } break;
-    default: {
-      line->status = Status::I;
-      break;
-    }
-    }
+    line->status = Status::I;
   } break;
   case BusRequestType::Flush: {
     std::cout << "FLUSH should not appear here!" << std::endl;
