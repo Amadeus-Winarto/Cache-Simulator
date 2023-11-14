@@ -2,11 +2,24 @@
 #include "argparse/argparse.hpp"
 
 #include <filesystem>
+#include <sstream>
 
 auto parser() -> argparse::ArgumentParser {
   argparse::ArgumentParser program{"Cache Simulator"};
+
+  std::stringstream ss;
+  ss << "Cache coherence protocol to use. One of: [";
+  for (auto it = SUPPORTED_PROTOCOLS.begin(); it != SUPPORTED_PROTOCOLS.end();
+       it++) {
+    ss << *it;
+    if (it != SUPPORTED_PROTOCOLS.end() - 1) {
+      ss << ", ";
+    }
+  }
+  ss << "]";
+
   program.add_argument("protocol")
-      .help("Cache coherence protocol to use")
+      .help(ss.str())
       .action([](const std::string &value) {
         if (std::find(SUPPORTED_PROTOCOLS.begin(), SUPPORTED_PROTOCOLS.end(),
                       value) != SUPPORTED_PROTOCOLS.end()) {
