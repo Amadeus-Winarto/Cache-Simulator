@@ -26,6 +26,7 @@ auto to_string(const MESIStatus &status) -> std::string {
   }
 }
 
+template <>
 auto MESIProtocol::handle_read_miss(
     int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
@@ -149,6 +150,7 @@ auto MESIProtocol::handle_read_miss(
   }
 }
 
+template <>
 auto MESIProtocol::handle_write_miss(
     int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
@@ -270,6 +272,7 @@ auto MESIProtocol::handle_write_miss(
   }
 }
 
+template <>
 auto MESIProtocol::handle_read_hit(
     int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>> &,
@@ -297,6 +300,7 @@ auto MESIProtocol::handle_read_hit(
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
+template <>
 auto MESIProtocol::handle_write_hit(
     int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
@@ -390,6 +394,8 @@ auto MESIProtocol::handle_write_hit(
   }
   }
 }
+
+template <>
 auto MESIProtocol::state_transition(const BusRequest &request,
                                     std::shared_ptr<CacheLine<MESIStatus>> line)
     -> void {
@@ -432,6 +438,7 @@ auto MESIProtocol::state_transition(const BusRequest &request,
   };
 }
 
+template <>
 auto MESIProtocol::handle_bus_request(
     const BusRequest &request, std::shared_ptr<Bus> bus, int32_t controller_id,
     std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,

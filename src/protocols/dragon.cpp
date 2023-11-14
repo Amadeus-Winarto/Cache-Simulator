@@ -27,6 +27,7 @@ auto to_string(const DragonStatus &status) -> std::string {
   }
 }
 
+template <>
 auto DragonProtocol::handle_read_miss(
     int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
@@ -151,6 +152,7 @@ auto DragonProtocol::handle_read_miss(
   }
 }
 
+template <>
 auto DragonProtocol::handle_write_miss(
     int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
@@ -325,6 +327,7 @@ auto DragonProtocol::handle_write_miss(
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
+template <>
 auto DragonProtocol::handle_read_hit(
     int controller_id, int32_t, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<DragonProtocol>>> &,
@@ -341,6 +344,7 @@ auto DragonProtocol::handle_read_hit(
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
+template <>
 auto DragonProtocol::handle_write_hit(
     int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<DragonProtocol>>>
@@ -429,6 +433,8 @@ auto DragonProtocol::handle_write_hit(
   }
   }
 }
+
+template <>
 auto DragonProtocol::state_transition(
     const BusRequest &request, std::shared_ptr<CacheLine<DragonStatus>> line)
     -> void {
@@ -477,6 +483,7 @@ auto DragonProtocol::state_transition(
   };
 }
 
+template <>
 auto DragonProtocol::handle_bus_request(
     const BusRequest &request, std::shared_ptr<Bus> bus, int32_t controller_id,
     std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
