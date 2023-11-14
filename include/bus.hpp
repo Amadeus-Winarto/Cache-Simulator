@@ -27,6 +27,7 @@ private:
 
 public:
   bool already_flush = false;
+  bool already_busrd = false;
 
   // Request Line
   std::optional<BusRequest> request_queue;

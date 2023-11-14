@@ -54,6 +54,7 @@ void Bus::release(int controller_id) {
 
   // std::cout << "Bus released by " << controller_id << std::endl;
   already_flush = false;
+  already_busrd = false;
 }
 
 auto Bus::get_owner_id() -> std::optional<int> { return owner_id; }

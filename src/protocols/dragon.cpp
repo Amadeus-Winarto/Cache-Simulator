@@ -189,14 +189,13 @@ auto DragonProtocol::handle_write_miss(
     }
   }
 
-  // Send BusUpd
-  auto request =
-      BusRequest{BusRequestType::BusUpd, parsed_address.address, controller_id};
+  if (!bus->already_busrd) {
+    // See if any other cache has the data
+    auto read_request = BusRequest{BusRequestType::BusRd,
+                                   parsed_address.address, controller_id};
+    bus->request_queue = read_request;
 
-  if (line->status == DragonStatus::Sm) {
-    bus->request_queue = request;
-
-    // Wait for response
+    // Get responses from other caches
     for (auto cache_controller : cache_controllers) {
       cache_controller->receive_bus_request();
     }
@@ -214,14 +213,23 @@ auto DragonProtocol::handle_write_miss(
     }
     if (is_waiting) {
 #ifdef DEBUG_FLAG
-      std::cout << "\t<<< Waiting for Cache..." << std::endl;
+      std::cout << "\t<<< Waiting for Cache to BusRd ..." << std::endl;
 #endif
       // We are waiting for another cache to respond -> cannot process
       // instruction
       // -> return the same instruction
       return instruction;
+    } else {
+#ifdef DEBUG_FLAG
+      std::cout << "\t<<< Cache BusRd completed ..." << std::endl;
+#endif
+      // Cache-to-cache transfer completed
+      bus->already_busrd = true;
     }
   }
+
+  // Invariant: When this point is reached, this cache knows if shared or not
+  // shared
 
   // Read response
   auto is_shared =
@@ -235,7 +243,7 @@ auto DragonProtocol::handle_write_miss(
                 [](auto &&valid_bit) { valid_bit = false; });
 
   if (!is_shared) {
-    // Miss: Go to memory controller
+    // Not shared -> Go to memory controller
     if (memory_controller->read_data(parsed_address)) {
       // Memory-to-cache transfer completed -> Update cache line
       line->tag = parsed_address.tag;
@@ -252,17 +260,53 @@ auto DragonProtocol::handle_write_miss(
 #endif
       return instruction;
     }
-  } else {
-    // Cache-to-cache transfer completed -> Update cache line
-    line->tag = parsed_address.tag;
-    line->last_used = curr_cycle;
-    line->status = DragonStatus::Sm;
-#ifdef DEBUG_FLAG
-    std::cout << "\t<<< " << to_string(line) << std::endl;
-#endif
-    bus->release(controller_id);
-    return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
+
+  // Invariant: Cache definitely has the data and is shared -> send BusUpd
+  auto request =
+      BusRequest{BusRequestType::BusUpd, parsed_address.address, controller_id};
+
+  bus->request_queue = request;
+
+  // Wait for response
+  for (auto cache_controller : cache_controllers) {
+    cache_controller->receive_bus_request();
+  }
+
+  // Check if any of the response is a PENDING response
+  bool is_waiting = false;
+  for (auto i = 0; i < NUM_CORES; i++) {
+    if (bus->response_wait_bits.at(i) == true) {
+      is_waiting = true;
+
+      // Reset the pending cache's information
+      bus->response_completed_bits.at(i) = false;
+      break;
+    }
+  }
+  if (is_waiting) {
+#ifdef DEBUG_FLAG
+    std::cout << "\t<<< Waiting for Cache..." << std::endl;
+#endif
+    // We are waiting for another cache to respond -> cannot process
+    // instruction
+    // -> return the same instruction
+    return instruction;
+  }
+
+  // Invalidate all responses
+  std::for_each(bus->response_completed_bits.begin(),
+                bus->response_completed_bits.end(),
+                [](auto &&valid_bit) { valid_bit = false; });
+
+  line->tag = parsed_address.tag;
+  line->last_used = curr_cycle;
+  line->status = DragonStatus::Sm;
+#ifdef DEBUG_FLAG
+  std::cout << "\t<<< " << to_string(line) << std::endl;
+#endif
+  bus->release(controller_id);
+  return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
 auto DragonProtocol::handle_read_hit(
@@ -439,7 +483,7 @@ auto DragonProtocol::handle_bus_request(
       // wait 2N cycles
       return std::make_shared<std::tuple<BusRequest, int32_t>>(
           std::make_tuple(request, 2 * num_words_per_line - 1));
-    } else if (request.type == BusRequestType::BusUpd) {
+    } else if (is_hit && request.type == BusRequestType::BusUpd) {
 #ifdef DEBUG_FLAG
       std::cout << "\tCache " << controller_id << " BusUpd send only word"
                 << std::endl;
