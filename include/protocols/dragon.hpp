@@ -12,13 +12,7 @@
 #include <optional>
 #include <vector>
 
-enum class DragonStatus { 
-  E = 3,
-  Sm = 2,
-  Sc = 1,
-  M = 4,
-  I = 0 
-};
+enum class DragonStatus { E = 3, Sm = 2, Sc = 1, M = 4, I = 0 };
 auto to_string(const DragonStatus &status) -> std::string;
 
 class DragonProtocol {
@@ -56,7 +50,7 @@ public:
                                std::shared_ptr<CacheLine<DragonStatus>> line)
       -> void;
 
-    static auto handle_bus_request(
+  static auto handle_bus_request(
       const BusRequest &request, std::shared_ptr<Bus> bus,
       int32_t controller_id,
       std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
