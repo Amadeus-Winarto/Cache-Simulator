@@ -2,7 +2,7 @@
 
 ## Introduction
 
-We implemented a cache simulator for analyzing how different snooping-based coherence protocols such as MESI and Dragonfly perform under various workloads. Given any program, we can use our simulator to compare the performance of various protocols, based on number of Bus Transactions, Memory Requests, Memory Write-Backs and Cache-to-Cache Transfers.
+We implemented a cache simulator for analyzing how different snooping-based coherence protocols such as MESI, MOESI, and Dragon, perform under various workloads. Given any program, we can use our simulator to compare the performance of various protocols, based on number of Bus Transactions, Memory Requests, Memory Write-Backs and Cache-to-Cache Transfers.
 
 ## Usage
 
@@ -50,7 +50,31 @@ TODO
 
 ### MOESI
 
-TODO
+The MOESI protocol we implement extends the Illinois protocol with *dirty-sharing*. An additional state O(wner) is added to the protocol. When a cache has the line in the M state, but the request is a read request, the cache transitions to the O state and responds to the request with the data *without* writing back to memory. Thus, writes to main memory only occur when a cache line is evicted from the M state.
+
+The MOESI protocol implemented in our simulator is thus as follows:
+
+- On Read Miss:
+  - A `BusRd` bus transaction is broadcasted to all caches and main memory
+  - If any other cache has the line, the main memory is inhibited from responding to the request
+  - An implicit priority network is assumed i.e. only one cache can respond to the request
+    - If the responding cache is in the O state, it sends the data *without* writing back to memory and remains in the O state
+    - If the responding cache is in the M state, it sends the data *without* writing back to memory and transitions to the O state
+    - If the responding cache is in the E or S state, it sends the data *without* writing back to memory and transitions to the S state
+  - For all other cache:
+    - If it has the line in the M state, it transitions to the O state
+    - If it has the line in the O state, it remains in the O state
+    - If it has the line in the E or S state, it transitions to the S state
+- On Write Miss:
+  - A `BusRdX` bus transaction is broadcasted to all caches and main memory
+  - Response is handled similarly to Read Miss, except instead of transitioning to S state, the responding caches transition to I state
+- On Read Hit:
+  - No bus transactions are generated. The cache line remains in the same state.
+- On Write Hit:
+  - If cache line is in M state, then no writes to main memory is performed. The cache line remains in the M state.
+  - If cache line is in E state, then no writes to main memory is performed. The cache line transitions to M state.
+  - If cache line is in S state, then an invalidation signal is asserted (no bus traffic is generated). The cache line transitions to M state.
+- On eviction, a cache line is written back to memory only if it is in the M state or the O state.
 
 ## Building
 
