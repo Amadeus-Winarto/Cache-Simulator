@@ -22,6 +22,7 @@ auto to_string(const BusRequest &request) -> std::string;
  */
 class Bus {
 private:
+  bool just_released = false;
   std::optional<int> owner_id;
   std::list<int> registration_queue;
 
@@ -45,4 +46,6 @@ public:
   auto acquire(int controller_id) -> int;
   void release(int controller_id);
   auto get_owner_id() -> std::optional<int>;
+
+  auto reset() -> void;
 };

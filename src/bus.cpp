@@ -7,6 +7,10 @@ Bus::Bus(int num_processors)
       response_wait_bits(num_processors, false){};
 
 auto Bus::acquire(int controller_id) -> int {
+  if (just_released) {
+    return false;
+  }
+
   if (!owner_id) {
     // Not owner -> make yourself owner
     owner_id = controller_id;
@@ -55,6 +59,9 @@ void Bus::release(int controller_id) {
   // std::cout << "Bus released by " << controller_id << std::endl;
   already_flush = false;
   already_busrd = false;
+  just_released = true;
 }
 
 auto Bus::get_owner_id() -> std::optional<int> { return owner_id; }
+
+auto Bus::reset() -> void { just_released = false; }

@@ -207,6 +207,7 @@ int main(int argc, char **argv) {
       variant_caches_and_cores)) {
     cycle++;
     memory_controller->run_once();
+    bus->reset();
 
     // Run each core once
     std::visit(
