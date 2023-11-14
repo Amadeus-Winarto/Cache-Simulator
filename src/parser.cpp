@@ -8,7 +8,6 @@ auto parser() -> argparse::ArgumentParser {
   program.add_argument("protocol")
       .help("Cache coherence protocol to use")
       .action([](const std::string &value) {
-        static const std::vector<std::string> SUPPORTED_PROTOCOLS = {"MESI"};
         if (std::find(SUPPORTED_PROTOCOLS.begin(), SUPPORTED_PROTOCOLS.end(),
                       value) != SUPPORTED_PROTOCOLS.end()) {
           return value;
