@@ -23,11 +23,11 @@ auto MemoryController::run_once() -> void {
   if (write_buffer.run_once()) {
     stats_accum->on_write_back();
   };
-#else
+#endif
+
   if (pending_write_back && pending_write_back.value() > 0) {
     pending_write_back = pending_write_back.value() - 1;
   }
-#endif
 
   if (pending_data_read && pending_data_read.value() > 0) {
     pending_data_read = pending_data_read.value() - 1;
@@ -54,7 +54,16 @@ auto MemoryController::read_data(uint32_t address) -> bool {
 
 #ifdef USE_WRITE_BUFFER
 auto MemoryController::write_back_with_write_buffer(uint32_t address) -> bool {
-  return write_buffer.add_to_queue(address);
+  if (!pending_write_back) {
+    pending_write_back = delay - 1;
+    return false;
+  } else if (pending_write_back && pending_write_back.value() == 0) {
+    pending_write_back = std::nullopt;
+    write_buffer.add_to_queue(address);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 auto MemoryController::read_data_with_write_buffer(uint32_t address) -> bool {
