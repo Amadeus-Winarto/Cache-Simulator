@@ -17,10 +17,10 @@ auto MESIWriteBuffer::run_once() -> bool {
   return false;
 }
 
-auto MESIWriteBuffer::add_to_queue(ParsedAddress parsed_address) -> bool {
+auto MESIWriteBuffer::add_to_queue(uint32_t address) -> bool {
   if (capacity == -1 || queue.size() < capacity) {
     // Infinite capacity, or queue is not full
-    queue.push_back(std::make_tuple(parsed_address, MEMORY_MISS_PENALTY));
+    queue.push_back(std::make_tuple(address, MEMORY_MISS_PENALTY));
     return true;
   } else {
     // Finite capacity, and queue is full
@@ -28,9 +28,9 @@ auto MESIWriteBuffer::add_to_queue(ParsedAddress parsed_address) -> bool {
   }
 }
 
-auto MESIWriteBuffer::remove_if_present(ParsedAddress parsed_address) -> bool {
+auto MESIWriteBuffer::remove_if_present(uint32_t address) -> bool {
   for (auto it = queue.begin(); it != queue.end(); it++) {
-    if (std::get<0>(*it).address == parsed_address.address) {
+    if (std::get<0>(*it) == address) {
       queue.erase(it);
       return true;
     }

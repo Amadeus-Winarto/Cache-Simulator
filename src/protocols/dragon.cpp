@@ -52,7 +52,7 @@ auto DragonProtocol::handle_read_miss(
   if (((line->status == DragonStatus::M || line->status == DragonStatus::Sm) &&
        bus->already_flush == false)) {
     // Write-back to Memory
-    if (memory_controller->write_back(parsed_address)) {
+    if (memory_controller->write_back(parsed_address.address)) {
       // Write-back completed! Invalidate the line so that the next time it is
       // called, it goes back to read-miss
 #ifdef DEBUG_FLAG
@@ -116,7 +116,7 @@ auto DragonProtocol::handle_read_miss(
 
   if (!is_shared) {
     // Miss: Go to memory controller
-    if (memory_controller->read_data(parsed_address)) {
+    if (memory_controller->read_data(parsed_address.address)) {
       // Memory-to-cache transfer completed ->  Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
@@ -180,7 +180,7 @@ auto DragonProtocol::handle_write_miss(
     const auto request = BusRequest{BusRequestType::Flush,
                                     parsed_address.address, controller_id};
     bus->request_queue = request;
-    if (memory_controller->write_back(parsed_address)) {
+    if (memory_controller->write_back(parsed_address.address)) {
       // Write-back completed!
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
@@ -254,7 +254,7 @@ auto DragonProtocol::handle_write_miss(
 
   if (!is_shared) {
     // Not shared -> Go to memory controller
-    if (memory_controller->read_data(parsed_address)) {
+    if (memory_controller->read_data(parsed_address.address)) {
       // Memory-to-cache transfer completed -> Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
@@ -277,7 +277,7 @@ auto DragonProtocol::handle_write_miss(
   // Invariant: Cache definitely has the data and is shared -> send BusUpd
   stats_accum->on_bus_traffic(
       cache_controllers.at(controller_id)->cache.num_words_per_line);
-      
+
   auto request =
       BusRequest{BusRequestType::BusUpd, parsed_address.address, controller_id};
 
@@ -482,6 +482,7 @@ auto DragonProtocol::handle_bus_request(
     std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
     bool is_hit, int32_t num_words_per_line,
     std::shared_ptr<CacheLine<DragonStatus>> line,
+    std::shared_ptr<MemoryController> memory_controller,
     std::shared_ptr<StatisticsAccumulator> stats_accum)
     -> std::shared_ptr<std::tuple<BusRequest, int32_t>> {
   // Respond to request

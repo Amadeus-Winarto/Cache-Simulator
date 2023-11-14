@@ -76,6 +76,7 @@ public:
       std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
       bool is_hit, int32_t num_words_per_line,
       std::shared_ptr<CacheLine<MESIStatus>> line,
+      std::shared_ptr<MemoryController> memory_controller,
       std::shared_ptr<StatisticsAccumulator> stats_accum)
       -> std::shared_ptr<std::tuple<BusRequest, int32_t>>;
 };

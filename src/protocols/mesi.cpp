@@ -26,7 +26,6 @@ auto to_string(const MESIStatus &status) -> std::string {
   }
 }
 
-// TODO: Complete MESI Protocol
 auto MESIProtocol::handle_read_miss(
     int controller_id, int32_t curr_cycle, ParsedAddress parsed_address,
     std::vector<std::shared_ptr<CacheController<MESIProtocol>>>
@@ -51,7 +50,7 @@ auto MESIProtocol::handle_read_miss(
 
   if (line->status == MESIStatus::M && bus->already_flush == false) {
     // Initiate write-back to Memory
-    if (memory_controller->write_back(parsed_address)) {
+    if (memory_controller->write_back(parsed_address.address)) {
       // Write-back completed!
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
@@ -115,7 +114,7 @@ auto MESIProtocol::handle_read_miss(
 
   if (!is_shared) {
     // Miss: Go to memory controller
-    if (memory_controller->read_data(parsed_address)) {
+    if (memory_controller->read_data(parsed_address.address)) {
       // Memory-to-cache transfer completed ->  Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
@@ -174,7 +173,7 @@ auto MESIProtocol::handle_write_miss(
 
   if (line->status == MESIStatus::M && bus->already_flush == false) {
     // Write-back to Memory
-    if (memory_controller->write_back(parsed_address)) {
+    if (memory_controller->write_back(parsed_address.address)) {
       // Write-back completed!
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
@@ -238,7 +237,7 @@ auto MESIProtocol::handle_write_miss(
 
   if (!is_shared) {
     // Miss: Go to memory controller
-    if (memory_controller->read_data(parsed_address)) {
+    if (memory_controller->read_data(request.address)) {
       // Memory-to-cache transfer completed -> Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
@@ -438,6 +437,7 @@ auto MESIProtocol::handle_bus_request(
     std::shared_ptr<std::tuple<BusRequest, int32_t>> pending_bus_request,
     bool is_hit, int32_t num_words_per_line,
     std::shared_ptr<CacheLine<MESIStatus>> line,
+    std::shared_ptr<MemoryController> memory_controller,
     std::shared_ptr<StatisticsAccumulator> stats_accum)
     -> std::shared_ptr<std::tuple<BusRequest, int32_t>> {
   // Respond to request
@@ -455,8 +455,35 @@ auto MESIProtocol::handle_bus_request(
       std::cout << "\tCache " << controller_id
                 << " is hit! Initiate cache-to-cache transfer" << std::endl;
 #endif
-      return std::make_shared<std::tuple<BusRequest, int32_t>>(
-          std::make_tuple(request, 2 * num_words_per_line - 1));
+      // Cache hit -> initiate cache-to-cache transfer
+      if (line->status == MESIStatus::M) {
+        if (memory_controller->write_back(request.address)) {
+          // Write-back completed!
+          bus->response_completed_bits.at(controller_id) = true;
+          bus->response_wait_bits.at(controller_id) = false;
+
+          if (request.type == BusRequestType::BusRdX) {
+            stats_accum->on_invalidate(controller_id);
+          }
+          MESIProtocol::state_transition(request, line);
+#ifdef DEBUG_FLAG
+          std::cout << "\t<<< Cache " << controller_id
+                    << " finished writing back to memory and cache!"
+                    << std::endl;
+#endif
+          return nullptr;
+        } else {
+#ifdef DEBUG_FLAG
+          std::cout << "\t<<< Cache " << controller_id
+                    << " is writing back to memory..." << std::endl;
+#endif
+          // Write-back is not done
+          return nullptr;
+        }
+      } else {
+        return std::make_shared<std::tuple<BusRequest, int32_t>>(
+            std::make_tuple(request, 2 * num_words_per_line - 1));
+      }
     } else {
 #ifdef DEBUG_FLAG
       std::cout << "\tCache " << controller_id << " is miss!" << std::endl;

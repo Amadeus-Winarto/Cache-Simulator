@@ -159,7 +159,7 @@ public:
 
     pending_bus_request = Protocol::handle_bus_request(
         request, bus, controller_id, pending_bus_request, is_hit,
-        cache.num_words_per_line, line, stats_accum);
+        cache.num_words_per_line, line, memory_controller, stats_accum);
     return;
   }
 
