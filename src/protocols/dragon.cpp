@@ -21,7 +21,7 @@ auto to_string(const DragonStatus &status) -> std::string {
   case DragonStatus::M:
     return "M";
   case DragonStatus::I:
-    return "I";   
+    return "I";
   default:
     return "Unknown";
   }
@@ -48,7 +48,8 @@ auto DragonProtocol::handle_read_miss(
   std::cout << ss.str();
 #endif
 
-  if (((line->status == DragonStatus::M || line ->status == DragonStatus::Sm )&& bus->already_flush == false)) {
+  if (((line->status == DragonStatus::M || line->status == DragonStatus::Sm) &&
+       bus->already_flush == false)) {
     // Write-back to Memory
     if (memory_controller->write_back(parsed_address)) {
       // Write-back completed! Invalidate the line so that the next time it is
@@ -67,7 +68,7 @@ auto DragonProtocol::handle_read_miss(
       return instruction;
     }
   }
-  
+
   // Send BusRd request
   const auto request =
       BusRequest{BusRequestType::BusRd, parsed_address.address, controller_id};
@@ -100,15 +101,15 @@ auto DragonProtocol::handle_read_miss(
   }
 
   // Read response
-  auto is_shared = 
+  auto is_shared =
       std::reduce(bus->response_is_present_bits.begin(),
                   bus->response_is_present_bits.end(), false,
                   [](bool acc, bool is_present) { return acc || is_present; });
 
   // Invalidate all responses lmao do i invalidate??
   std::for_each(bus->response_completed_bits.begin(),
-                 bus->response_completed_bits.end(),
-                 [](auto &&valid_bit) { valid_bit = false; });
+                bus->response_completed_bits.end(),
+                [](auto &&valid_bit) { valid_bit = false; });
 
   if (!is_shared) {
     // Miss: Go to memory controller
@@ -151,7 +152,7 @@ auto DragonProtocol::handle_write_miss(
     std::shared_ptr<MemoryController> memory_controller) -> Instruction {
   const auto instruction =
       Instruction{InstructionType::WRITE, std::nullopt, parsed_address.address};
-    
+
   if (!bus->acquire(controller_id)) {
     return instruction;
   }
@@ -165,18 +166,19 @@ auto DragonProtocol::handle_write_miss(
   std::cout << ss.str();
 #endif
 
-  if (((line->status == DragonStatus::M || line ->status == DragonStatus::Sm )&& bus->already_flush == false)) {
+  if (((line->status == DragonStatus::M || line->status == DragonStatus::Sm) &&
+       bus->already_flush == false)) {
     // Write-back to Memory
     const auto request = BusRequest{BusRequestType::Flush,
                                     parsed_address.address, controller_id};
     bus->request_queue = request;
     if (memory_controller->write_back(parsed_address)) {
-      // Write-back completed! 
+      // Write-back completed!
 #ifdef DEBUG_FLAG
       std::cout << "\t<<<Finish writing LRU to memory" << std::endl;
 #endif
-        // Set already_flush to true so that the next time it is called, it does
-        // not write-back again 
+      // Set already_flush to true so that the next time it is called, it does
+      // not write-back again
       bus->already_flush = true;
     } else {
 #ifdef DEBUG_FLAG
@@ -190,10 +192,10 @@ auto DragonProtocol::handle_write_miss(
   // Send BusUpd
   auto request =
       BusRequest{BusRequestType::BusUpd, parsed_address.address, controller_id};
-  
-  if(line->status == DragonStatus::Sm){
+
+  if (line->status == DragonStatus::Sm) {
     bus->request_queue = request;
-    
+
     // Wait for response
     for (auto cache_controller : cache_controllers) {
       cache_controller->receive_bus_request();
@@ -211,13 +213,14 @@ auto DragonProtocol::handle_write_miss(
       }
     }
     if (is_waiting) {
-      #ifdef DEBUG_FLAG
-        std::cout << "\t<<< Waiting for Cache..." << std::endl;
-      #endif
-      // We are waiting for another cache to respond -> cannot process instruction
+#ifdef DEBUG_FLAG
+      std::cout << "\t<<< Waiting for Cache..." << std::endl;
+#endif
+      // We are waiting for another cache to respond -> cannot process
+      // instruction
       // -> return the same instruction
       return instruction;
-    }  
+    }
   }
 
   // Read response
@@ -345,13 +348,7 @@ auto DragonProtocol::handle_write_hit(
       return instruction;
     }
 
-    // Read response
-    auto is_shared = std::reduce(
-        bus->response_is_present_bits.begin(),
-        bus->response_is_present_bits.end(), false,
-        [](bool acc, bool is_present) { return acc || is_present; });
-
-    // clear bus 
+    // clear bus
     std::for_each(bus->response_completed_bits.begin(),
                   bus->response_completed_bits.end(),
                   [](auto &&valid_bit) { valid_bit = false; });
@@ -369,8 +366,8 @@ auto DragonProtocol::handle_write_hit(
   }
   }
 }
-auto DragonProtocol::state_transition(const BusRequest &request,
-                                    std::shared_ptr<CacheLine<DragonStatus>> line)
+auto DragonProtocol::state_transition(
+    const BusRequest &request, std::shared_ptr<CacheLine<DragonStatus>> line)
     -> void {
   switch (request.type) {
   case BusRequestType::BusRd: {
@@ -398,7 +395,7 @@ auto DragonProtocol::state_transition(const BusRequest &request,
     // bus updates
     switch (line->status) {
     case Status::I: {
-      line->status = Status::I; //do nth 
+      line->status = Status::I; // do nth
     } break;
     default: {
       line->status = Status::Sc;
@@ -432,25 +429,24 @@ auto DragonProtocol::handle_bus_request(
 
     bus->response_is_present_bits.at(controller_id) = is_hit;
     bus->response_wait_bits.at(controller_id) = is_hit;
-    
+
     if (is_hit && request.type == BusRequestType::BusRd) {
 #ifdef DEBUG_FLAG
       std::cout << "\tCache " << controller_id
                 << " is hit! Initiate cache-to-cache transfer" << std::endl;
 #endif
-      //wait 2N cycles
+      // wait 2N cycles
       return std::make_shared<std::tuple<BusRequest, int32_t>>(
           std::make_tuple(request, 2 * num_words_per_line - 1));
-    } else if(request.type == BusRequestType::BusUpd){
+    } else if (request.type == BusRequestType::BusUpd) {
 #ifdef DEBUG_FLAG
-      std::cout << "\tCache " << controller_id
-                << " BusUpd send only word" << std::endl;
+      std::cout << "\tCache " << controller_id << " BusUpd send only word"
+                << std::endl;
 #endif
-      //wait 2 cycles
+      // wait 2 cycles
       return std::make_shared<std::tuple<BusRequest, int32_t>>(
           std::make_tuple(request, 2 - 1));
-    }
-    else {
+    } else {
 #ifdef DEBUG_FLAG
       std::cout << "\tCache " << controller_id << " is miss!" << std::endl;
 #endif
