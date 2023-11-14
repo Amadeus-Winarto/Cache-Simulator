@@ -78,7 +78,7 @@ public:
         num_sets((cache_size / associativity) /
                  block_size), // 64 Sets -> set_index goes from 0 to 63
         num_set_index_bits(std::log2(num_sets)), // 6 bits to address 64 sets
-        num_words_per_line(std::pow(2, num_offset_bits)), sets(num_sets) {
+        num_words_per_line(block_size / (WORD_SIZE >> 3)), sets(num_sets) {
 
     for (int i = 0; i < num_sets; i++) {
       sets.at(i) = std::make_shared<CacheSet<Status>>(static_cast<uint32_t>(i),
