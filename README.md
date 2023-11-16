@@ -1,5 +1,17 @@
 # Cache Coherence Simulator
 
+- [Cache Coherence Simulator](#cache-coherence-simulator)
+  - [Introduction](#introduction)
+  - [Usage](#usage)
+  - [Protocols](#protocols)
+    - [MESI](#mesi)
+    - [Dragon](#dragon)
+    - [MOESI](#moesi)
+  - [Building](#building)
+  - [Simulated Hardware Architecture](#simulated-hardware-architecture)
+    - [Default](#default)
+    - [Optimisation: Write Buffer](#optimisation-write-buffer)
+
 ## Introduction
 
 We implemented a cache simulator for analyzing how different snooping-based coherence protocols such as MESI, MOESI, and Dragon, perform under various workloads. Given any program, we can use our simulator to compare the performance of various protocols, based on number of Bus Transactions, Memory Requests, Memory Write-Backs and Cache-to-Cache Transfers.
@@ -94,3 +106,30 @@ make
 This codebase uses C++20 features, so you will need a compiler that supports it. We have tested this codebase with GCC 11.4.0, GCC 12.3.0, and Clang 15.0.7 on Ubuntu 22.04. There are known issues with MSVC due to its incomplete support for C++20.
 
 This codebase also uses CMake>3.20 as we use the `FetchContent` module to download the [argparse](https://github.com/p-ranav/argparse) library, which is used for parsing command line arguments.
+
+## Simulated Hardware Architecture
+
+### Default
+
+We use a system-wide bus to broadcast bus transactions to all caches and main memory. The bus is *atomic* i.e. only one bus transaction can be in flight at any given time. This is a simplification of the actual bus architecture. Writes and reads to main memory takes 100 cycles each. There is no write buffer for writes to main memory. Bus arbitration is done with a FIFO queue.
+
+### Optimisation: Write Buffer
+
+We implement a write buffer as an optional optimisation. With a write buffer, a main-memory "write" only sends the data to the write buffer. The write buffer is then drained in the background.
+
+- If the write buffer is full, subsequent writes to the write buffer are stalled until the write buffer is sufficiently drained.
+- If a cache line in the write buffer is requested before the write has completed, the main memory is inhibited from responding to the request. Instead, the write-buffer services the request. The write to main memory for that cache line is cancelled.
+- If a cache line in the write buffer is requested after the write has completed, the main memory responds to the request.
+- While the write-buffer writes to main-memory, the main-memory is able to respond to read requests.
+
+The number of cycles for cache-to-write-buffer transfer is assumed to be the same as the number of cycles for cache-to-cache transfer to occur.
+
+Note that with this optimisation, the system remains *sequentially consistent*. This is because even though the writes are not yet visible to the main memory, it is visible to all other caches via the write-buffer. Hence, no actual load-store reordering occurs.
+
+To compile with the write buffer optimisation, pass the `USE_WRITE_BUFFER` flag to the compiler:
+
+```bash
+cmake .. -DUSE_WRITE_BUFFER=ON
+```
+
+The default write buffer size is `-1` i.e. infinite. To change the write buffer size, modify the capacity in `include/write_buffer.hpp`.
