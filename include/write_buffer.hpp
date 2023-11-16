@@ -7,14 +7,14 @@
 
 using AddressCyclePair = std::tuple<uint32_t, int>;
 
-class MESIWriteBuffer {
+class WriteBuffer {
 private:
   const int capacity;
   const int MEMORY_MISS_PENALTY;
   std::vector<AddressCyclePair> queue;
 
 public:
-  MESIWriteBuffer(int memory_miss_penalty, int capacity = -1)
+  WriteBuffer(int memory_miss_penalty, int capacity = -1)
       : capacity(capacity), MEMORY_MISS_PENALTY(memory_miss_penalty) {}
 
   auto add_to_queue(uint32_t address) -> bool;

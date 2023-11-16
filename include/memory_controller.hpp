@@ -11,7 +11,7 @@ constexpr auto MEMORY_MISS_PENALTY = 100;
 
 class MemoryController {
 private:
-  MESIWriteBuffer write_buffer;
+  WriteBuffer write_buffer;
   std::optional<int> pending_write_back;
 
   std::optional<int> pending_data_read;

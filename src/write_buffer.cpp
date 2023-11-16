@@ -1,8 +1,8 @@
 #include "write_buffer.hpp"
 
-auto MESIWriteBuffer::is_empty() -> bool { return queue.empty(); }
+auto WriteBuffer::is_empty() -> bool { return queue.empty(); }
 
-auto MESIWriteBuffer::run_once() -> bool {
+auto WriteBuffer::run_once() -> bool {
   if (queue.empty()) {
     return false;
   }
@@ -17,7 +17,7 @@ auto MESIWriteBuffer::run_once() -> bool {
   return false;
 }
 
-auto MESIWriteBuffer::add_to_queue(uint32_t address) -> bool {
+auto WriteBuffer::add_to_queue(uint32_t address) -> bool {
   if (capacity == -1 || queue.size() < capacity) {
     // Infinite capacity, or queue is not full
     queue.push_back(std::make_tuple(address, MEMORY_MISS_PENALTY));
@@ -28,7 +28,7 @@ auto MESIWriteBuffer::add_to_queue(uint32_t address) -> bool {
   }
 }
 
-auto MESIWriteBuffer::remove_if_present(uint32_t address) -> bool {
+auto WriteBuffer::remove_if_present(uint32_t address) -> bool {
   for (auto it = queue.begin(); it != queue.end(); it++) {
     if (std::get<0>(*it) == address) {
       queue.erase(it);
