@@ -461,9 +461,39 @@ auto MESIFProtocol::handle_bus_request(
                 << " is hit! Initiate cache-to-cache transfer" << std::endl;
 #endif
       // Cache hit -> initiate cache-to-cache transfer
-      // This is possible since MOESI allows cache-to-cache transfer
-      return std::make_shared<std::tuple<BusRequest, int32_t>>(
-          std::make_tuple(request, 2 * num_words_per_line - 1));
+      if (line->status == MESIFStatus::M) {
+        if (memory_controller->write_back(request.address)) {
+          // Write-back completed!
+          bus->response_completed_bits.at(controller_id) = true;
+          bus->response_wait_bits.at(controller_id) = false;
+
+          if (request.type == BusRequestType::BusRdX) {
+            stats_accum->on_invalidate(controller_id);
+          }
+          MESIFProtocol::state_transition(request, line);
+#ifdef DEBUG_FLAG
+          std::cout << "\t\t\t--> Cache " << controller_id
+                    << " finished writing back to memory and cache!"
+                    << std::endl;
+#endif
+          return nullptr;
+        } else {
+#ifdef DEBUG_FLAG
+          std::cout << "\t\t\t--> Cache " << controller_id
+                    << " is writing back to memory..." << std::endl;
+#endif
+          // Write-back is not done
+          return nullptr;
+        }
+      } else if (line->status == MESIFStatus::E) {
+        return std::make_shared<std::tuple<BusRequest, int32_t>>(
+            std::make_tuple(request, 2 * num_words_per_line - 1));
+      } else if (line->status == MESIFStatus::S) {
+        // No daisy-chain cost because MESIF handles the problem using an
+        // additional state
+        return std::make_shared<std::tuple<BusRequest, int32_t>>(
+            std::make_tuple(request, 2 * num_words_per_line - 1));
+      }
     } else {
 #ifdef DEBUG_FLAG
       std::cout << "\t\t\tCache " << controller_id << " is miss!" << std::endl;
