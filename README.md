@@ -16,6 +16,14 @@
 
 We implemented a cache simulator for analyzing how different snooping-based coherence protocols such as MESI, MOESI, and Dragon, perform under various workloads. Given any program, we can use our simulator to compare the performance of various protocols, based on number of Bus Transactions, Memory Requests, Memory Write-Backs and Cache-to-Cache Transfers.
 
+We simulate the cycle delays according to the following:
+1. Chache to Main Memory --> 100 cycles
+2. Cache to cache transfer --> 4*N + (P + 1) cycles, where N is the number of words per cache line and P is the number of Processors.
+3. Bus updates --> 2 cycles
+4. cache hit--> 0 cycles
+
+The rationale for the additional (P+1) cycles delay for cache to cache transfer was to simulate the overhead for cache to cache communications.
+
 ## Usage
 
 ```bash
@@ -60,8 +68,34 @@ The MESI protocol implemented in our simulator is thus as follows:
 - On eviction, a cache line is written back to memory only if it is in the M state.
 
 ### Dragon
+The Dragon Protocol has 4 states - Modified(M), Shared-Modified(Sm), Shared-Clean(Sc) and Exclusive(E). Modified and Exclusive states in the Dragon protocol are similar to that of the MESI protocols and its variants. The Dragon Protocol is an update based protocol adapted from the Xerox PARC Dragon processor. 
 
-TODO
+Bus transactions
+1. Bus Update
+2. Bus Read
+
+Processor transactions
+1. Processor read
+2. Processor write
+
+The behaviour is as follows:
+- On Read Miss:
+  - A `BusRd` bus transaction is broadcasted to all caches and main memory
+  - If any other cache has the line, the main memory is inhibited from responding to the request
+  - If a cache line is shared, the cache line within the processor transitions to Sc and the responding cache line either transitions from M->Sm or E->Sc or it remain as Sc.
+  - If a cache line is not shared, the cache line within the processor transitions to Exclusive.
+- On Write Miss:
+  - A `BusRd` bus transaction is broadcasted to all caches and main memory
+  - If the cache line is shared, the cache line within the processor transitions to Sm. A `BusUpd` is then sent to all shared cache.
+  - If the cache line is not shared, the cache line within the processor transitions to M.
+- On Read Hit:
+  - No bus transactions are generated. The cache line remains in the same state.
+- On Write Hit:
+  - If cache line is in M state, then no writes to main memory is performed. The cache line remains in the M state.
+  - If cache line is in E state, then no writes to main memory is performed. The cache line transitions to M state.
+  - If cache line is in Sm state, A `BusUpd` is then sent to all shared cache. The cache line remains in Sm.
+  - If cache line is in Sc state, A `BusUpd` is then sent to all shared cache. The cache line transitons to Sm.
+- On eviction, a cache line is written back to memory if it is in the M or Sm state.
 
 ### MOESI
 
@@ -91,6 +125,29 @@ The MOESI protocol implemented in our simulator is thus as follows:
   - If cache line is in E state, then no writes to main memory is performed. The cache line transitions to M state.
   - If cache line is in S state, then an invalidation signal is asserted (no bus traffic is generated). The cache line transitions to M state.
 - On eviction, a cache line is written back to memory only if it is in the M state or the O state.
+
+### MESIF
+The MOESI protocol we implement extends the Illinois protocol with *dirty-sharing*. An additional state F(Forward) is added to the protocol. When a cache line transitions is the Invalid state and the processor does a PrRd, it transitions to the Forward state. This allows clean sharing amongst the processors. 
+
+The MESIF protocol implemented in our simulator is thus as follows:
+
+- On Read Miss:
+  - A `BusRd` bus transaction is broadcasted to all caches and main memory
+  - If any other cache has the line, the main memory is inhibited from responding to the request.
+  - If the cache line is in the I state, it transitions to the F state if the cache line is shared.
+  - If the cache line is in the S, M, E or F state, it remains in its own state. 
+  - For all other cache:
+    - If it has the line in the M state, it transitions to the S state
+    - If it has the line in the E, S or F state, it transitions to the S state
+- On Write Miss:
+  - A `BusRdX` bus transaction is broadcasted to all caches and main memory
+  - Response is handled similarly to Read Miss, except instead of transitioning to S state, the responding caches transition to I state
+- On Read Hit:
+  - No bus transactions are generated. The cache line remains in the same state.
+- On Write Hit:
+  - If cache line is in M or E state, then no writes to main memory is performed. The cache line remains in the M state.
+  - If cache line is in S or F state, then an invalidation signal is asserted (no bus traffic is generated). The cache line transitions to M state.
+- On eviction, a cache line is written back to memory only if it is in the M state.
 
 ## Building
 
