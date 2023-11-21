@@ -127,7 +127,7 @@ The MOESI protocol implemented in our simulator is thus as follows:
 - On eviction, a cache line is written back to memory only if it is in the M state or the O state.
 
 ### MESIF
-The MOESI protocol we implement extends the Illinois protocol with *dirty-sharing*. An additional state F(Forward) is added to the protocol. When a cache line transitions is the Invalid state and the processor does a PrRd, it transitions to the Forward state. This allows clean sharing amongst the processors. 
+The MESUF protocol we implement extends the Illinois protocol with *dirty-sharing*. An additional state F(Forward) is added to the protocol. When a cache line transitions is the Invalid state and the processor does a PrRd, it transitions to the Forward state. This allows clean sharing amongst the processors. 
 
 The MESIF protocol implemented in our simulator is thus as follows:
 
