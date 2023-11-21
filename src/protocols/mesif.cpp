@@ -11,6 +11,8 @@
 #include <numeric>
 #include <optional>
 
+constexpr auto DAISY_CHAIN_COST = NUM_CORES + 1; // 1 for memory
+
 auto to_string(const MESIFStatus &status) -> std::string {
   switch (status) {
   case MESIFStatus::M:
@@ -348,9 +350,9 @@ auto MESIFProtocol::handle_write_hit(
     std::cout << ss.str();
 #endif
 
-    // Send BusRdX request
-    auto request = BusRequest{BusRequestType::BusRdX, parsed_address.address,
-                              controller_id};
+    // Send BusInvalidate request
+    auto request = BusRequest{BusRequestType::BusInvalidate,
+                              parsed_address.address, controller_id};
     bus->request_queue = request;
 
     // Wait for response
@@ -428,11 +430,18 @@ auto MESIFProtocol::state_transition(
   case BusRequestType::Flush: {
     std::cout << "FLUSH should not appear here!" << std::endl;
     std::exit(0);
+    break;
   }
-  case BusRequestType::BusUpd:
+  case BusRequestType::BusUpd: {
     std::cout << "BUSUPD should not appear here!" << std::endl;
     std::exit(0);
     break;
+  }
+  case BusRequestType::BusInvalidate: {
+    // Invalidation request
+    line->status = Status::I;
+    break;
+  }
   };
 }
 
@@ -454,6 +463,14 @@ auto MESIFProtocol::handle_bus_request(
 
     bus->response_is_present_bits.at(controller_id) = is_hit;
     bus->response_wait_bits.at(controller_id) = is_hit;
+
+    if (request.type == BusRequestType::BusInvalidate) {
+      bus->response_wait_bits.at(controller_id) = false;
+      stats_accum->on_invalidate(controller_id);
+
+      MESIFProtocol::state_transition(request, line);
+      return nullptr;
+    }
 
     if (is_hit) {
 #ifdef DEBUG_FLAG
@@ -485,14 +502,14 @@ auto MESIFProtocol::handle_bus_request(
           // Write-back is not done
           return nullptr;
         }
-      } else if (line->status == MESIFStatus::E) {
-        return std::make_shared<std::tuple<BusRequest, int32_t>>(
-            std::make_tuple(request, 2 * num_words_per_line - 1));
-      } else if (line->status == MESIFStatus::S) {
+      } else if (line->status == MESIFStatus::E || line->status == MESIFStatus::F) {
         // No daisy-chain cost because MESIF handles the problem using an
         // additional state
         return std::make_shared<std::tuple<BusRequest, int32_t>>(
             std::make_tuple(request, 2 * num_words_per_line - 1));
+      } else if (line->status == MESIFStatus::S) {
+        return std::make_shared<std::tuple<BusRequest, int32_t>>(
+            std::make_tuple(request, 2 * num_words_per_line - 1 + DAISY_CHAIN_COST));
       }
     } else {
 #ifdef DEBUG_FLAG
@@ -533,4 +550,5 @@ auto MESIFProtocol::handle_bus_request(
       return nullptr;
     }
   }
+  return nullptr;
 }

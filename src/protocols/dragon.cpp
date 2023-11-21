@@ -476,10 +476,15 @@ auto DragonProtocol::state_transition(
     std::cout << "FLUSH should not appear here!" << std::endl;
     std::exit(0);
   }
-  case BusRequestType::BusRdX:
+  case BusRequestType::BusRdX: {
     std::cout << "BusRdX should not appear here!" << std::endl;
     std::exit(0);
     break;
+  }
+  case BusRequestType::BusInvalidate: {
+    std::cout << "BusInvalidate should not appear here!" << std::endl;
+    break;
+  }
   };
 }
 
@@ -544,8 +549,8 @@ auto DragonProtocol::handle_bus_request(
           std::make_tuple(request, cycles_left - 1));
     } else {
 #ifdef DEBUG_FLAG
-      std::cout << "\t\t\tCache " << controller_id << " finished sending cache line"
-                << std::endl;
+      std::cout << "\t\t\tCache " << controller_id
+                << " finished sending cache line" << std::endl;
 #endif
       bus->response_completed_bits.at(controller_id) = true;
       bus->response_wait_bits.at(controller_id) = false;

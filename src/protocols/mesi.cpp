@@ -342,9 +342,9 @@ auto MESIProtocol::handle_write_hit(
     std::cout << ss.str();
 #endif
 
-    // Send BusRdX request
-    auto request = BusRequest{BusRequestType::BusRdX, parsed_address.address,
-                              controller_id};
+    // Send BusInvalidate request
+    auto request = BusRequest{BusRequestType::BusInvalidate,
+                              parsed_address.address, controller_id};
     bus->request_queue = request;
 
     // Wait for response
@@ -389,11 +389,9 @@ auto MESIProtocol::handle_write_hit(
     bus->release(controller_id);
     return Instruction{InstructionType::OTHER, 0, std::nullopt};
   }
-  case MESIStatus::I: {
-    // Impossible!
+  default:
     std::cout << "Impossible!" << std::endl;
     return instruction;
-  }
   }
 }
 
@@ -429,6 +427,10 @@ auto MESIProtocol::state_transition(const BusRequest &request,
     std::cout << "BUSUPD should not appear here!" << std::endl;
     std::exit(0);
     break;
+  case BusRequestType::BusInvalidate:
+    // Invalidation request
+    line->status = Status::I;
+    break;
   };
 }
 
@@ -450,6 +452,14 @@ auto MESIProtocol::handle_bus_request(
 
     bus->response_is_present_bits.at(controller_id) = is_hit;
     bus->response_wait_bits.at(controller_id) = is_hit;
+
+    if (request.type == BusRequestType::BusInvalidate) {
+      bus->response_wait_bits.at(controller_id) = false;
+      stats_accum->on_invalidate(controller_id);
+
+      MESIProtocol::state_transition(request, line);
+      return nullptr;
+    }
 
     if (is_hit) {
 #ifdef DEBUG_FLAG
@@ -528,4 +538,5 @@ auto MESIProtocol::handle_bus_request(
       return nullptr;
     }
   }
+  return nullptr;
 }
