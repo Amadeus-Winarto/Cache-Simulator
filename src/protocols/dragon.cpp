@@ -140,7 +140,7 @@ auto DragonProtocol::handle_read_miss(
     // Cache-to-cache transfer completed -> Update cache line
     line->tag = parsed_address.tag;
     line->last_used = curr_cycle;
-    line->status = DragonStatus::Sm;
+    line->status = DragonStatus::Sc;
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
