@@ -15,16 +15,16 @@
 
 ## Introduction
 
-We implemented a cache simulator for analyzing how different snooping-based coherence protocols such as MESI, MOESI, and Dragon, perform under various workloads. Given any program, we can use our simulator to compare the performance of various protocols, based on number of Bus Transactions, Memory Requests, Memory Write-Backs and Cache-to-Cache Transfers.
+We implemented a cache simulator for analyzing how different snooping-based coherence protocols such as MESI, MOESI, MESIF, and Dragon, perform under various workloads. Given any program, we can use our simulator to compare the performance of various protocols, based on number of Bus Transactions, Memory Requests, Memory Write-Backs and Cache-to-Cache Transfers.
 
 We simulate the cycle delays according to the following:
 
-1. Chache to Main Memory --> 100 cycles
-2. Cache to cache transfer --> 4*N + (P + 1) cycles, where N is the number of words per cache line and P is the number of Processors.
+1. Cache to Main Memory --> 100 cycles
+2. Cache to cache transfer --> 2*N + (P + 1) cycles, where N is the number of words per cache line and P is the number of Processors.
 3. Bus updates --> 2 cycles
-4. cache hit--> 0 cycles
+4. Cache hit--> 0 cycles
 
-The rationale for the additional (P+1) cycles delay for cache to cache transfer was to simulate the overhead for cache to cache communications.
+The rationale for the additional (P+1) cycles delay for cache to cache transfer was to simulate the overhead for cache-to-cache communications.
 
 ## Usage
 
