@@ -3,6 +3,7 @@
 import subprocess
 import multiprocessing
 import os
+from tqdm import tqdm
 
 PROGRAM = "build/coherence"
 TEST_DIR = "tests"
@@ -21,8 +22,8 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 
-def run_testcase(protocol, testcase):
-    print("*", end="", flush=True)
+def run_testcase(protocol_testcase_pair):
+    protocol, testcase = protocol_testcase_pair
     with open(
         f"{OUTPUT_DIR}/{protocol}_{testcase}.out".format(TEST_DIR, testcase),
         "w",
@@ -36,8 +37,19 @@ def run_testcase(protocol, testcase):
         )
 
 
-with multiprocessing.Pool(processes=multiprocessing.cpu_count() // 2) as pool:
-    pool.starmap(
-        run_testcase,
-        [(protocol, testcase) for protocol in PROTOCOLS for testcase in TESTCASES],
+num_cores = multiprocessing.cpu_count() // 2
+print(f"Running on {num_cores} cores")
+with multiprocessing.Pool(processes=num_cores) as pool:
+    r = list(
+        tqdm(
+            pool.imap(
+                run_testcase,
+                [
+                    (protocol, testcase)
+                    for protocol in PROTOCOLS
+                    for testcase in TESTCASES
+                ],
+            ),
+            total=len(PROTOCOLS) * len(TESTCASES),
+        )
     )
