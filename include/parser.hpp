@@ -1,6 +1,6 @@
 #include "argparse/argparse.hpp"
 
 static const std::vector<std::string> SUPPORTED_PROTOCOLS = {"MESI", "Dragon",
-                                                             "MOESI"};
+                                                             "MOESI", "MESIF"};
 
 auto parser() -> argparse::ArgumentParser;

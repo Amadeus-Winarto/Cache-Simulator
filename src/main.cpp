@@ -4,6 +4,7 @@
 #include "memory_controller.hpp"
 #include "parser.hpp"
 #include "processor.hpp"
+#include "protocols/mesif.hpp"
 #include "protocols/moesi.hpp"
 #include "statistics.hpp"
 #include "trace.hpp"
@@ -37,14 +38,19 @@ using DragonCacheController = CacheController<DragonProtocol>;
 using MOESIProcessor = Processor<MOESIProtocol>;
 using MOESICacheController = CacheController<MOESIProtocol>;
 
+using MESIFProcessor = Processor<MESIFProtocol>;
+using MESIFCacheController = CacheController<MESIFProtocol>;
+
 // Processor
-using var_t = std::variant<
-    std::tuple<std::vector<std::shared_ptr<MESICacheController>>,
-               std::vector<std::shared_ptr<MESIProcessor>>>,
-    std::tuple<std::vector<std::shared_ptr<DragonCacheController>>,
-               std::vector<std::shared_ptr<DragonProcessor>>>,
-    std::tuple<std::vector<std::shared_ptr<MOESICacheController>>,
-               std::vector<std::shared_ptr<Processor<MOESIProtocol>>>>>;
+using var_t =
+    std::variant<std::tuple<std::vector<std::shared_ptr<MESICacheController>>,
+                            std::vector<std::shared_ptr<MESIProcessor>>>,
+                 std::tuple<std::vector<std::shared_ptr<DragonCacheController>>,
+                            std::vector<std::shared_ptr<DragonProcessor>>>,
+                 std::tuple<std::vector<std::shared_ptr<MOESICacheController>>,
+                            std::vector<std::shared_ptr<MOESIProcessor>>>,
+                 std::tuple<std::vector<std::shared_ptr<MESIFCacheController>>,
+                            std::vector<std::shared_ptr<MESIFProcessor>>>>;
 
 template <typename Protocol>
 auto build_cache_controllers(
@@ -122,8 +128,11 @@ int main(int argc, char **argv) {
       : protocol == SUPPORTED_PROTOCOLS.at(1)
           ? std::vector<int>{static_cast<int>(DragonStatus::M),
                              static_cast<int>(DragonStatus::E)}
-          : std::vector<int>{static_cast<int>(MOESIStatus::M),
-                             static_cast<int>(MOESIStatus::E)};
+      : protocol == SUPPORTED_PROTOCOLS.at(2)
+          ? std::vector<int>{static_cast<int>(MOESIStatus::M),
+                             static_cast<int>(MOESIStatus::E)}
+          : std::vector<int>{static_cast<int>(MESIFStatus::M),
+                             static_cast<int>(MESIFStatus::E)};
 
   auto public_states =
       protocol == SUPPORTED_PROTOCOLS.at(0)
@@ -131,8 +140,11 @@ int main(int argc, char **argv) {
       : protocol == SUPPORTED_PROTOCOLS.at(1)
           ? std::vector<int>{static_cast<int>(DragonStatus::Sm),
                              static_cast<int>(DragonStatus::Sc)}
-          : std::vector<int>(static_cast<int>(MOESIStatus::O),
-                             static_cast<int>(MOESIStatus::S));
+      : protocol == SUPPORTED_PROTOCOLS.at(2)
+          ? std::vector<int>(static_cast<int>(MOESIStatus::O),
+                             static_cast<int>(MOESIStatus::S))
+          : std::vector<int>{static_cast<int>(MESIFStatus::S),
+                             static_cast<int>(MESIFStatus::F)};
 
   auto stats_accum = std::make_shared<StatisticsAccumulator>(
       NUM_CORES, private_states, public_states);
@@ -175,9 +187,14 @@ int main(int argc, char **argv) {
           ? var_t{build_caches_and_cores<DragonProtocol>(
                 cache_size, associativity, block_size, bus, traces,
                 memory_controller, stats_accum)}
-          : var_t{build_caches_and_cores<MOESIProtocol>(
+      : protocol == SUPPORTED_PROTOCOLS.at(2)
+          ? var_t{build_caches_and_cores<MOESIProtocol>(
+                cache_size, associativity, block_size, bus, traces,
+                memory_controller, stats_accum)}
+          : var_t{build_caches_and_cores<MESIFProtocol>(
                 cache_size, associativity, block_size, bus, traces,
                 memory_controller, stats_accum)};
+  ;
 
   // Initialise memory controller delay
   const auto num_words_per_line = std::visit(
