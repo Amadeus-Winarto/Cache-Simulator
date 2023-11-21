@@ -502,14 +502,15 @@ auto MESIFProtocol::handle_bus_request(
           // Write-back is not done
           return nullptr;
         }
-      } else if (line->status == MESIFStatus::E || line->status == MESIFStatus::F) {
+      } else if (line->status == MESIFStatus::E ||
+                 line->status == MESIFStatus::F) {
         // No daisy-chain cost because MESIF handles the problem using an
         // additional state
         return std::make_shared<std::tuple<BusRequest, int32_t>>(
             std::make_tuple(request, 2 * num_words_per_line - 1));
       } else if (line->status == MESIFStatus::S) {
         return std::make_shared<std::tuple<BusRequest, int32_t>>(
-            std::make_tuple(request, 2 * num_words_per_line - 1 + DAISY_CHAIN_COST));
+            std::make_tuple(request, 2 * num_words_per_line - 1));
       }
     } else {
 #ifdef DEBUG_FLAG
