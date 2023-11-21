@@ -5,3 +5,9 @@ build
 tests/blackscholes
 tests/bodytrack
 tests/fluidanimate
+
+tests/all_write
+tests/one_write_many_reads
+tests/random_read_write
+
+outputs
