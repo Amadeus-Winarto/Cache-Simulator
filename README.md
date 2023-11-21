@@ -7,6 +7,7 @@
     - [MESI](#mesi)
     - [Dragon](#dragon)
     - [MOESI](#moesi)
+    - [MESIF](#mesif)
   - [Building](#building)
   - [Simulated Hardware Architecture](#simulated-hardware-architecture)
     - [Default](#default)
@@ -17,6 +18,7 @@
 We implemented a cache simulator for analyzing how different snooping-based coherence protocols such as MESI, MOESI, and Dragon, perform under various workloads. Given any program, we can use our simulator to compare the performance of various protocols, based on number of Bus Transactions, Memory Requests, Memory Write-Backs and Cache-to-Cache Transfers.
 
 We simulate the cycle delays according to the following:
+
 1. Chache to Main Memory --> 100 cycles
 2. Cache to cache transfer --> 4*N + (P + 1) cycles, where N is the number of words per cache line and P is the number of Processors.
 3. Bus updates --> 2 cycles
@@ -68,17 +70,21 @@ The MESI protocol implemented in our simulator is thus as follows:
 - On eviction, a cache line is written back to memory only if it is in the M state.
 
 ### Dragon
-The Dragon Protocol has 4 states - Modified(M), Shared-Modified(Sm), Shared-Clean(Sc) and Exclusive(E). Modified and Exclusive states in the Dragon protocol are similar to that of the MESI protocols and its variants. The Dragon Protocol is an update based protocol adapted from the Xerox PARC Dragon processor. 
+
+The Dragon Protocol has 4 states - Modified(M), Shared-Modified(Sm), Shared-Clean(Sc) and Exclusive(E). Modified and Exclusive states in the Dragon protocol are similar to that of the MESI protocols and its variants. The Dragon Protocol is an update based protocol adapted from the Xerox PARC Dragon processor.
 
 Bus transactions
+
 1. Bus Update
 2. Bus Read
 
 Processor transactions
+
 1. Processor read
 2. Processor write
 
 The behaviour is as follows:
+
 - On Read Miss:
   - A `BusRd` bus transaction is broadcasted to all caches and main memory
   - If any other cache has the line, the main memory is inhibited from responding to the request
@@ -127,7 +133,8 @@ The MOESI protocol implemented in our simulator is thus as follows:
 - On eviction, a cache line is written back to memory only if it is in the M state or the O state.
 
 ### MESIF
-The MESIF protocol we implement extends the Illinois protocol with *dirty-sharing*. An additional state F(Forward) is added to the protocol. When a cache line transitions is the Invalid state and the processor does a PrRd, it transitions to the Forward state. This allows clean sharing amongst the processors. 
+
+The MESIF protocol we implement extends the Illinois protocol with *dirty-sharing*. An additional state F(Forward) is added to the protocol. When a cache line transitions is the Invalid state and the processor does a PrRd, it transitions to the Forward state. This allows clean sharing amongst the processors.
 
 The MESIF protocol implemented in our simulator is thus as follows:
 
@@ -135,7 +142,7 @@ The MESIF protocol implemented in our simulator is thus as follows:
   - A `BusRd` bus transaction is broadcasted to all caches and main memory
   - If any other cache has the line, the main memory is inhibited from responding to the request.
   - If the cache line is in the I state, it transitions to the F state if the cache line is shared.
-  - If the cache line is in the S, M, E or F state, it remains in its own state. 
+  - If the cache line is in the S, M, E or F state, it remains in its own state.
   - For all other cache:
     - If it has the line in the M state, it transitions to the S state
     - If it has the line in the E, S or F state, it transitions to the S state
