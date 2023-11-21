@@ -4,13 +4,13 @@
 #include "memory_controller.hpp"
 #include "parser.hpp"
 #include "processor.hpp"
-#include "protocols/mesif.hpp"
-#include "protocols/moesi.hpp"
 #include "statistics.hpp"
 #include "trace.hpp"
 
 #include "protocols/dragon.hpp"
 #include "protocols/mesi.hpp"
+#include "protocols/mesif.hpp"
+#include "protocols/moesi.hpp"
 
 #include <algorithm>
 #include <array>
@@ -239,6 +239,18 @@ int main(int argc, char **argv) {
               });
         },
         variant_caches_and_cores);
+
+#ifdef DEBUG_FLAG
+    // Print each cache's content
+    std::visit(
+        [](auto &&arg) {
+          auto caches = std::get<0>(arg);
+          std::for_each(caches.begin(), caches.end(), [](auto &cache) {
+            cache->get_interesting_cache_lines();
+          });
+        },
+        variant_caches_and_cores);
+#endif
 
     if (cycle % PRINT_INTERVAL == 0) {
       std::cout << "Cycle: " << (cycle / PRINT_INTERVAL) << UNIT << std::endl;
