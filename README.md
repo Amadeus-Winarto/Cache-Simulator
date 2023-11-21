@@ -44,7 +44,8 @@ The MESI protocol implemented in our simulator is thus as follows:
 - On Read Miss:
   - A `BusRd` bus transaction is broadcasted to all caches and main memory
   - If any other cache has the line, the main memory is inhibited from responding to the request
-  - An implicit priority network is assumed i.e. only one cache can respond to the request
+  - A hardware daisy-chain is assumed i.e. only one cache can respond to the request. This enables *clean-sharing* of cache lines.
+    - The cost of arbitration using a daisy-chain is assumed to be 1 cycle per cache/main-memory. Hence, in a 4-core setup, the arbitration cost is 5 cycles.
   - All caches that have the line transitions to the S state
   - If the responding cache has the line in the M state, it transitions to the S state *while* writing back to memory
 - On Write Miss:
@@ -71,10 +72,11 @@ The MOESI protocol implemented in our simulator is thus as follows:
 - On Read Miss:
   - A `BusRd` bus transaction is broadcasted to all caches and main memory
   - If any other cache has the line, the main memory is inhibited from responding to the request
-  - An implicit priority network is assumed i.e. only one cache can respond to the request
-    - If the responding cache is in the O state, it sends the data *without* writing back to memory and remains in the O state
-    - If the responding cache is in the M state, it sends the data *without* writing back to memory and transitions to the O state
-    - If the responding cache is in the E or S state, it sends the data *without* writing back to memory and transitions to the S state
+  - A hardware daisy-chain is assumed i.e. only one cache can respond to the request. This enables *clean-sharing* of cache lines.
+    - The cost of arbitration using a daisy-chain is assumed to be 1 cycle per cache/main-memory. Hence, in a 4-core setup, the arbitration cost is 5 cycles.
+  - If the responding cache is in the O state, it sends the data *without* writing back to memory and remains in the O state
+  - If the responding cache is in the M state, it sends the data *without* writing back to memory and transitions to the O state
+  - If the responding cache is in the E or S state, it sends the data *without* writing back to memory and transitions to the S state
   - For all other cache:
     - If it has the line in the M state, it transitions to the O state
     - If it has the line in the O state, it remains in the O state

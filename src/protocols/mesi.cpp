@@ -11,6 +11,8 @@
 #include <numeric>
 #include <optional>
 
+constexpr auto DAISY_CHAIN_COST = NUM_CORES + 1; // 1 for memory
+
 auto to_string(const MESIStatus &status) -> std::string {
   switch (status) {
   case MESIStatus::M:
@@ -479,9 +481,13 @@ auto MESIProtocol::handle_bus_request(
           // Write-back is not done
           return nullptr;
         }
-      } else {
+      } else if (line->status == MESIStatus::E) {
         return std::make_shared<std::tuple<BusRequest, int32_t>>(
             std::make_tuple(request, 2 * num_words_per_line - 1));
+      } else if (line->status == MESIStatus::S) {
+        return std::make_shared<std::tuple<BusRequest, int32_t>>(
+            std::make_tuple(request,
+                            2 * num_words_per_line - 1 + DAISY_CHAIN_COST));
       }
     } else {
 #ifdef DEBUG_FLAG

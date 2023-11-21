@@ -11,6 +11,8 @@
 #include <numeric>
 #include <optional>
 
+constexpr auto DAISY_CHAIN_COST = NUM_CORES + 1; // 1 for memory
+
 auto to_string(const MOESIStatus &status) -> std::string {
   switch (status) {
   case MOESIStatus::M:
@@ -463,6 +465,10 @@ auto MOESIProtocol::handle_bus_request(
 #endif
       // Cache hit -> initiate cache-to-cache transfer
       // This is possible since MOESI allows cache-to-cache transfer
+      if (line->status == MOESIStatus::S) {
+        return std::make_shared<std::tuple<BusRequest, int32_t>>(
+            std::make_tuple(request, 2 * num_words_per_line - 1 + DAISY_CHAIN_COST));
+      }
       return std::make_shared<std::tuple<BusRequest, int32_t>>(
           std::make_tuple(request, 2 * num_words_per_line - 1));
     } else {
