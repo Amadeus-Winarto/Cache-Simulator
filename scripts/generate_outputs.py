@@ -11,6 +11,9 @@ TESTCASES = [
     "blackscholes",
     "bodytrack",
     "fluidanimate",
+    "all_write",
+    "one_write_many_reads",
+    "random_read_write",
 ]
 OUTPUT_DIR = "outputs/refactored"
 
