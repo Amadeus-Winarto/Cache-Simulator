@@ -14,6 +14,7 @@ PROGRAM = "build/coherence"
 TEST_DIR = "tests"
 PROTOCOLS = ["MESI", "MOESI", "Dragon", "MESIF"]
 TESTCASES = [
+    "memory_test_simple",
     "blackscholes",
     "bodytrack",
     "fluidanimate",
