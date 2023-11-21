@@ -51,8 +51,7 @@ auto MESIFProtocol::handle_read_miss(
   std::cout << ss.str();
 #endif
 
-  if (line->status == MESIFStatus::M &&
-      bus->already_flush == false) {
+  if (line->status == MESIFStatus::M && bus->already_flush == false) {
     // Initiate write-back to Memory
     if (memory_controller->write_back(parsed_address.address)) {
       // Write-back completed!
@@ -138,7 +137,8 @@ auto MESIFProtocol::handle_read_miss(
       return instruction;
     }
   } else {
-    // Cache-to-cache transfer completed -> Update cache line in this case it goes to F
+    // Cache-to-cache transfer completed -> Update cache line in this case it
+    // goes to F
     line->tag = parsed_address.tag;
     line->last_used = curr_cycle;
     line->status = Status::F;
@@ -176,8 +176,7 @@ auto MESIFProtocol::handle_write_miss(
   std::cout << ss.str();
 #endif
 
-  if ((line->status == MESIFProtocol::M) &&
-      bus->already_flush == false) {
+  if ((line->status == MESIFStatus::M) && bus->already_flush == false) {
     // Write-back to Memory
     if (memory_controller->write_back(parsed_address.address)) {
       // Write-back completed!
@@ -247,7 +246,7 @@ auto MESIFProtocol::handle_write_miss(
       // Memory-to-cache transfer completed -> Update cache line
       line->tag = parsed_address.tag;
       line->last_used = curr_cycle;
-      line->status = MESIFProtocol::M;
+      line->status = MESIFStatus::M;
 #ifdef DEBUG_FLAG
       std::cout << "\t<<< " << to_string(line) << std::endl;
 #endif
@@ -388,7 +387,7 @@ auto MESIFProtocol::handle_write_hit(
     // Update cache line
     line->tag = parsed_address.tag;
     line->last_used = curr_cycle;
-    line->status = MESIFProtocol::M;
+    line->status = MESIFStatus::M;
 
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< " << to_string(line) << std::endl;
@@ -401,20 +400,20 @@ auto MESIFProtocol::handle_write_hit(
 
 template <>
 auto MESIFProtocol::state_transition(
-    const BusRequest &request, std::shared_ptr<CacheLine<MESIFProtocol>> line)
+    const BusRequest &request, std::shared_ptr<CacheLine<MESIFStatus>> line)
     -> void {
   switch (request.type) {
   case BusRequestType::BusRd: {
     // Read request
     switch (line->status) {
-    case Status::F: {
-      line->status = Status::S;
+    case MESIFStatus::F: {
+      line->status = MESIFStatus::S;
     } break;
-    case Status::E: {
-      line->status = Status::S;
+    case MESIFStatus::E: {
+      line->status = MESIFStatus::S;
     } break;
-    case Status::M: {
-      line->status = Status::S;
+    case MESIFStatus::M: {
+      line->status = MESIFStatus::S;
     } break;
     default: {
       break;

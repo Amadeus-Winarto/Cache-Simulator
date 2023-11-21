@@ -45,6 +45,14 @@ if(DEBUG)
     target_compile_definitions(moesi PRIVATE -DDEBUG_FLAG)
 endif()
 
+add_library(mesif STATIC src/protocols/mesif.cpp)
+target_compile_features(mesif PRIVATE cxx_std_20)
+target_compile_options(mesif PRIVATE -Wall -Wpedantic -O3)
+
+if(DEBUG)
+    target_compile_definitions(mesif PRIVATE -DDEBUG_FLAG)
+endif()
+
 # Compile main executable
 add_executable(coherence
     src/main.cpp
