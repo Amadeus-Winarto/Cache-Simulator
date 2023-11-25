@@ -134,7 +134,7 @@ The MOESI protocol implemented in our simulator is thus as follows:
 
 ### MESIF
 
-The MESIF protocol we implement extends the Illinois protocol with *dirty-sharing*. An additional state F(Forward) is added to the protocol. When a cache line transitions is the Invalid state and the processor does a PrRd, it transitions to the Forward state. This allows clean sharing amongst the processors.
+The MESIF protocol we implement extends the Illinois protocol with *clean sharing*. An additional state F(orward) is added to the protocol. When a cache line is in the Invalid state and the processor does a PrRd, it transitions to the Forward state. This allows clean-sharing amongst the processors. Daisy-chain hardware is still assumed whenever the Forward state is absent but the data is shared. For example, in the edge case were the cache line is in the F state and is evicted, then on the next cache miss, if the cache line is shared, the daisy chain penalty is taken on top of the 2*N cycles.
 
 The MESIF protocol implemented in our simulator is thus as follows:
 
