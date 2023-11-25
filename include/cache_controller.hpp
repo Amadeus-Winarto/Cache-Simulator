@@ -143,6 +143,7 @@ public:
     const auto &request = bus->request_queue.value();
     // Always ignore requests from the same cache
     if (request.controller_id == controller_id) {
+      bus->response_wait_bits.at(controller_id) = false;
       bus->response_completed_bits.at(controller_id) = true;
       bus->response_is_present_bits.at(controller_id) = false;
 #ifdef DEBUG_FLAG
