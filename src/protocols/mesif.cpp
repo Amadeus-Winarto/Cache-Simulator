@@ -85,6 +85,16 @@ auto MESIFProtocol::handle_read_miss(
     cache_controller->receive_bus_request();
   }
 
+  // Check if any of the response is Done and is a HIT
+  bool is_done = false;
+  for (auto i = 0; i < NUM_CORES; i++) {
+    if (bus->response_completed_bits.at(i) == true &&
+        bus->response_is_present_bits.at(i) == true) {
+      is_done = true;
+      break;
+    }
+  }
+
   // Check if any of the response is a PENDING response
   bool is_waiting = false;
   for (auto i = 0; i < NUM_CORES; i++) {
@@ -97,7 +107,33 @@ auto MESIFProtocol::handle_read_miss(
     }
   }
 
-  if (is_waiting) {
+  if (is_done) {
+    // There is at least 1 cache who has the data and have finished sending it
+    // -> we can proceed
+
+    // Invalidate all responses
+    std::for_each(bus->response_completed_bits.begin(),
+                  bus->response_completed_bits.end(),
+                  [](auto &&valid_bit) { valid_bit = false; });
+
+    // Reset all other caches since we have received the data
+    for (auto &cache_controller : cache_controllers) {
+      cache_controller->reset_bus_request();
+    }
+
+    // Update cache line
+    line->tag = parsed_address.tag;
+    line->last_used = curr_cycle;
+    line->status = Status::F;
+#ifdef DEBUG_FLAG
+    std::cout << "\t<<< " << to_string(line) << std::endl;
+#endif
+
+    stats_accum->on_bus_traffic(
+        cache_controllers.at(controller_id)->cache.num_words_per_line);
+    bus->release(controller_id);
+    return Instruction{InstructionType::OTHER, 0, std::nullopt};
+  } else if (is_waiting) {
 #ifdef DEBUG_FLAG
     std::cout << "\t<<< Waiting for Cache..." << std::endl;
 #endif
@@ -210,6 +246,16 @@ auto MESIFProtocol::handle_write_miss(
     cache_controller->receive_bus_request();
   }
 
+  // Check if any of the response is Done and is a HIT
+  bool is_done = false;
+  for (auto i = 0; i < NUM_CORES; i++) {
+    if (bus->response_completed_bits.at(i) == true &&
+        bus->response_is_present_bits.at(i) == true) {
+      is_done = true;
+      break;
+    }
+  }
+
   // Check if any of the response is a PENDING response
   bool is_waiting = false;
   for (auto i = 0; i < NUM_CORES; i++) {
@@ -242,7 +288,33 @@ auto MESIFProtocol::handle_write_miss(
                 bus->response_completed_bits.end(),
                 [](auto &&valid_bit) { valid_bit = false; });
 
-  if (!is_shared) {
+  if (is_done) {
+    // There is at least 1 cache who has the data and have finished sending it
+    // -> we can proceed
+
+    // Invalidate all responses
+    std::for_each(bus->response_completed_bits.begin(),
+                  bus->response_completed_bits.end(),
+                  [](auto &&valid_bit) { valid_bit = false; });
+
+    // Reset all other caches since we have received the data
+    for (auto &cache_controller : cache_controllers) {
+      cache_controller->reset_bus_request();
+    }
+
+    // Update cache line
+    line->tag = parsed_address.tag;
+    line->last_used = curr_cycle;
+    line->status = Status::M;
+#ifdef DEBUG_FLAG
+    std::cout << "\t<<< " << to_string(line) << std::endl;
+#endif
+
+    stats_accum->on_bus_traffic(
+        cache_controllers.at(controller_id)->cache.num_words_per_line);
+    bus->release(controller_id);
+    return Instruction{InstructionType::OTHER, 0, std::nullopt};
+  } else if (!is_shared) {
     // Miss: Go to memory controller
     if (memory_controller->read_data(request.address)) {
       // Memory-to-cache transfer completed -> Update cache line
@@ -510,12 +582,15 @@ auto MESIFProtocol::handle_bus_request(
             std::make_tuple(request, 2 * num_words_per_line - 1));
       } else if (line->status == MESIFStatus::S) {
         return std::make_shared<std::tuple<BusRequest, int32_t>>(
-            std::make_tuple(request, 2 * num_words_per_line - 1));
+            std::make_tuple(request,
+                            2 * num_words_per_line - 1 + DAISY_CHAIN_COST));
       }
     } else {
 #ifdef DEBUG_FLAG
       std::cout << "\t\t\tCache " << controller_id << " is miss!" << std::endl;
 #endif
+      bus->response_is_present_bits.at(controller_id) = false;
+      bus->response_wait_bits.at(controller_id) = false;
       bus->response_completed_bits.at(controller_id) = true;
       return nullptr;
     }

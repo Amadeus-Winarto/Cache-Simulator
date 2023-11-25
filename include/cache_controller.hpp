@@ -164,6 +164,8 @@ public:
     return;
   }
 
+  void reset_bus_request() { pending_bus_request = nullptr; }
+
 private:
   auto parse_address(uint32_t address) -> ParsedAddress {
     auto offset = address & ((1 << cache.num_offset_bits) - 1);
