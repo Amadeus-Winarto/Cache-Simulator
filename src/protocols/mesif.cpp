@@ -357,12 +357,6 @@ auto MESIFProtocol::handle_read_hit(
     std::shared_ptr<MemoryController>,
     std::shared_ptr<StatisticsAccumulator> stats_accum) -> Instruction {
 
-  const auto instruction =
-      Instruction{InstructionType::READ, std::nullopt, parsed_address.address};
-  if (!bus->acquire(controller_id)) {
-    return instruction;
-  }
-
 #ifdef DEBUG_FLAG
   std::stringstream ss;
   ss << "Cycle: " << curr_cycle << "\n"
@@ -373,7 +367,6 @@ auto MESIFProtocol::handle_read_hit(
 #endif
 
   // Optimisation: allow read hits to be processed without acquiring the bus
-  bus->release(controller_id);
   return Instruction{InstructionType::OTHER, 0, std::nullopt};
 }
 
