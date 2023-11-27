@@ -92,6 +92,8 @@ public:
           if (is_null_instr(instr)) {
             stats_accum->on_write_hit(controller_id, static_cast<int>(state),
                                       curr_cycle);
+          } else {
+            stats_accum->on_idle(controller_id, curr_cycle);
           }
           return instr;
         }
@@ -101,14 +103,22 @@ public:
       } else {
         switch (instr_type) {
         case InstructionType::READ: {
-          return Protocol::handle_read_miss(controller_id, curr_cycle, parsed,
-                                            cache_controllers, bus, line,
-                                            memory_controller, stats_accum);
+          auto instr = Protocol::handle_read_miss(
+              controller_id, curr_cycle, parsed, cache_controllers, bus, line,
+              memory_controller, stats_accum);
+          if (!is_null_instr(instr)) {
+            stats_accum->on_idle(controller_id, curr_cycle);
+          }
+          return instr;
         }
         case InstructionType::WRITE: {
-          return Protocol::handle_write_miss(controller_id, curr_cycle, parsed,
-                                             cache_controllers, bus, line,
-                                             memory_controller, stats_accum);
+          auto instr = Protocol::handle_write_miss(
+              controller_id, curr_cycle, parsed, cache_controllers, bus, line,
+              memory_controller, stats_accum);
+          if (!is_null_instr(instr)) {
+            stats_accum->on_idle(controller_id, curr_cycle);
+          }
+          return instr;
         }
         default:
           return Instruction{InstructionType::OTHER, 0, std::nullopt};
